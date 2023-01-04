@@ -21,3 +21,5 @@ Next-gen of FastNet & Networking Module
 -> Destroy & Disconnect the remote
 # FastNet2Remote:Disconnected()
 -> Check if the Remote is disconencted
+- Server
+# FastNet2Remote:Fire(player: Player, ...: any)
