@@ -23,3 +23,6 @@ Next-gen of FastNet & Networking Module
 -> Check if the Remote is disconencted
 - Server
 # FastNet2Remote:Fire(player: Player, ...: any)
+Note: Server currently incompleted
+- Client
+# FastNet2Remote:Fire(...: any)
