@@ -1,6 +1,8 @@
 # FastNet2 - a Incredible and Powerful Networking Module
 Next-gen of FastNet & Networking Module
 
+https://wally.run/package/imezx/fastnet2
+
 # * FastNet2 - APIs
 
 # FastNet2:IsExist(remoteName: string): boolean
