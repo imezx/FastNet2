@@ -1,6 +1,7 @@
 # FastNet2 - a Incredible and Powerful Networking Module
 Next-gen of FastNet & Networking Module
 
+# Wally Support
 https://wally.run/package/imezx/fastnet2
 
 # * FastNet2 - APIs
