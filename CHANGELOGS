@@ -1,5 +1,8 @@
 [CHANGELOGS - FASTNET2]
 
+[0.0.3 Replacement - Not Published]
+- Fixed critical issue on client side
+
 [0.0.3]
 - Improved Thread.luau
 - Increase threadsIndex
