@@ -2,7 +2,26 @@
 
 -- FastNet2
 -- v0.0.2-pre-alpha
-warn("Initializing FastNet2")
+local __load_s: any = tick()
+local FastNet2 = {}
+FastNet2.__index = FastNet2
+FastNet2.version = "0.0.3"
+FastNet2.build = 3
+
+type Tany = { [any]: any }
+
+--// Settings
+local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
+local _maxRate_perEvent: number = 500 -- default: 500
+local __threads: number = 250  -- default: 250
+local __callbacks: Tany = {}
+local __nets: Tany = {}
+local _toSend: Tany = {}
+
+if __threads < 100 then
+	__threads = 100
+end
+
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -10,9 +29,9 @@ local Players = game:GetService("Players")
 local IsServer = RunService:IsServer()
 local IsClient = RunService:IsClient()
 
--- Load Utils
+--// Load Utils
 local Debug = require(script:WaitForChild("Debug"))
-local Threads = require(script:WaitForChild("Thread"))
+local Threads = require(script:WaitForChild("Thread")).__start(__threads)
 
 local Nets: any
 local _NetEvent: RemoteEvent
@@ -36,19 +55,13 @@ end
 -- 	_NetInvoke = Nets:WaitForChild("Invoke")
 -- end
 
-local FastNet2 = {}
-FastNet2.__index = FastNet2
-FastNet2.version = "0.0.2"
-FastNet2.build = 2
-
-local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
-local _maxRate_perEvent: number = 500 -- default: 500
-local __callbacks: any = {}
-local __nets: any = {}
-local _toSend: any = {}
-
 if _maxRate_perEvent < 1 or _maxRate_perEvent == math.huge then
 	_maxRate_perEvent = 500
+end
+
+--// Internal Functions
+function __getProvider(): string
+	return IsClient and "Client" or "Server"
 end
 
 function IsExist(remoteName: string): boolean
@@ -58,9 +71,37 @@ function IsExist(remoteName: string): boolean
 	return false
 end
 
-function FastNet2:Exist(remoteName: string): boolean
-	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
-	return IsExist(remoteName)
+function _findIdentifier(IdentifierName: string): boolean
+	return _toSend[IdentifierName] and true or false
+end
+function _getIdentifier(IdentifierName: string): Tany | {}
+	if _findIdentifier(IdentifierName) then
+		return _toSend[IdentifierName]
+	end
+	return {}
+end
+function _createIdentifier(IdentifierName: string): Tany
+	if IsExist(IdentifierName) and not _findIdentifier(IdentifierName) then
+		_toSend[IdentifierName] = {}
+	end
+	return _getIdentifier(IdentifierName)
+end
+function _wipeIdentifier(IdentifierName: string)
+	if _findIdentifier(IdentifierName) then
+		_toSend[IdentifierName] = {}
+	end
+end
+function _removeIdentifier(IdentifierName: string): boolean
+	if _findIdentifier(IdentifierName) then
+		_wipeIdentifier(IdentifierName) -- clear first
+		_toSend[IdentifierName] = nil
+	end
+	return _findIdentifier(IdentifierName)
+end
+
+--// APIs
+function FastNet2.getProvider(): string
+	return IsClient and "Client" or "Server"
 end
 
 function FastNet2.toBestFormNumber(num: number): number | string
@@ -72,37 +113,26 @@ function FastNet2.toBestFormNumber(num: number): number | string
 	end
 end
 
-function _findIdentifier(IdentifierName: string): boolean
-	return _toSend[IdentifierName] and true or false
-end
-function _getIdentifier(IdentifierName: string): any
-	if _findIdentifier(IdentifierName) then
-		return _toSend[IdentifierName]
-	end
-	return {}
-end
-function _createIdentifier(IdentifierName: string): boolean
-	if IsExist(IdentifierName) and not _findIdentifier(IdentifierName) then
-		_toSend[IdentifierName] = {}
-	end
-	return _getIdentifier(IdentifierName)
-end
-function _wipeIdentifier(IdentifierName: string)
-	if _findIdentifier(IdentifierName) then
-		_toSend[IdentifierName] = {}
-	end
-end
-function _removeIdentifier(IdentifierName: string)
-	if _findIdentifier(IdentifierName) then
-		_wipeIdentifier(IdentifierName) -- clear first
-		_toSend[IdentifierName] = nil
-	end
-	return _findIdentifier(IdentifierName)
+function FastNet2:Wait(): number
+	--[[
+	Somereason just use PostSimulator as Heartbeat because Heartbeat only fire after Render Signal fire here why if the server/client dropped frame
+	could be bad, PostSimulator is the new of Heartbeat, PostSimultion dont need to wait until Render Signal fired.
+	PostSimulation is 1/60 or print(RunService.PostSimulation:Wait())
+	]]--
+	return RunService.PostSimulation:Wait() -- 60 frame / 0.0166s / 166.6ms
 end
 
-function FastNet2:Get(remoteName: string, waitFor: number): any
+function FastNet2:Exist(remoteName: string): boolean
+	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
+	return IsExist(remoteName)
+end
+
+function FastNet2:Get(remoteName: string, waitFor: number): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
 	if waitFor and typeof(waitFor) == "number" then
+		if waitFor < 5 then
+			waitFor = 5
+		end
 		local result, finish, _t = false, false, tick()
 		local _yield = coroutine.create(function()
 			repeat
@@ -183,7 +213,7 @@ function FastNet2:Get(remoteName: string, waitFor: number): any
 				table.insert(_currentIdentifier, { "Client", { ... } })
 			end
 		end
-		function __new:Disconnected()
+		function __new:Disconnected(): boolean
 			return __disconnected
 		end
 	end
@@ -198,7 +228,7 @@ function FastNet2:Get(remoteName: string, waitFor: number): any
 	return table.freeze(__new)
 end
 
-function FastNet2:Create(remoteName: string, typeRemote: string)
+function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
 	Debug.__direct_debug(typeof(typeRemote) == "string", "[FastNet2]: Invalid type of remote", 3, 2)
 	if not IsExist(remoteName) then
@@ -247,7 +277,6 @@ if IsServer then
 			end
 		end
 	end)
-	warn("Server initialized")
 elseif IsClient then
 	_NetEvent.OnClientEvent:Connect(function(pkg)
 		for identifier, _data in pkg do
@@ -280,14 +309,13 @@ elseif IsClient then
 			end
 		end
 	end)
-	warn("Client initialized")
 end
 
 -- Internal Events Handler
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
 	if (os.clock() - __t) >= (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
-		local to_send: any = {
+		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
 		}
@@ -380,5 +408,5 @@ RunService.PostSimulation:Connect(function()
 	end
 end)
 
-warn("FastNet2 initialized")
+warn(string.format("FastNet2 initialized [%s | %sms]", __getProvider(), (tick() - __load_s)*1000))
 return table.freeze(FastNet2)

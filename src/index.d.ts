@@ -1,6 +1,11 @@
+interface Debug {
+    set_debug(x : boolean): void
+    __direct_debug(c: any, m: string, l: number, l2: number | undefined): boolean
+}
+
 interface FastNet2 {
     // Debug.luau
-    set_debug(x: boolean): undefined
+    set_debug(x : boolean): void
     __direct_debug(c: any, m: string, l: number, l2: number | undefined): boolean
     // init.luau
     IsExist(remoteName: string): boolean
