@@ -4,6 +4,6 @@ version = "0.0.3"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 license = "MIT"
-description = "The successor of FastNet, FastNet2 is a incredible and powerful networking library."
+description = "The next of FastNet, FastNet2 is a incredible and powerful networking library."
 
 [dependencies]
