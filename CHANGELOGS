@@ -6,7 +6,7 @@
 [0.0.3]
 - Improved Thread.luau
 - Increase threadsIndex
-- Added :Wait & getProvider
+- Added :Wait & .getProvider
 - Minor improvements
 
 [0.0.2]
