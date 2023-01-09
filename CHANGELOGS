@@ -1,7 +1,15 @@
 [CHANGELOGS - FASTNET2]
 
+<<<<<<< HEAD
 [0.0.3 Replacement - Not Published]
 - Fixed critical issue on client side
+=======
+[0.0.4]
+- Added :Wait, :Once, & some other functions
+- Support lowercased name function
+- Minor Server side improvement
+- Patch critical on 0.0.3
+>>>>>>> 9c267cc (0.0.4)
 
 [0.0.3]
 - Improved Thread.luau
