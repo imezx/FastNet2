@@ -1,5 +1,12 @@
 [CHANGELOGS - FASTNET2]
 
+[0.0.5]
+- now fastnet2 requires to call .init(...) first
+- added thread-mode level option
+- added debug option
+- added new function
+- minor improvements & fix
+
 [0.0.4]
 - Added :Wait, :Once, & some other functions
 - Support lowercased name function
