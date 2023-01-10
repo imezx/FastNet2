@@ -48,7 +48,7 @@ function ThreadPool.__start(threadIndex: number) -- How many threads to pre-allo
 		coroutine.resume(thread, thread)
 		threads[i] = thread
 	end
-
+	
 	return function<_, params>(func: (params) -> (), ...: params): (thread)
 		if threadIndex ~= 0 then
 			-- Thread available
