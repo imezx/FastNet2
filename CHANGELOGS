@@ -1,5 +1,9 @@
 [CHANGELOGS - FASTNET2]
 
+[0.0.6]
+- RemoteFunction now supported (Beta)
+- minor improvements
+
 [0.0.5]
 - now fastnet2 requires to call .init(...) first
 - added thread-mode level option

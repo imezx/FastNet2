@@ -1,14 +1,14 @@
 --!strict
 
 -- FastNet2
--- v0.0.5-pre-alpha
+-- v0.0.6-pre-alpha
 local __load_s: any = tick()
 local Core = {}
 local FastNet2 = {}
 Core.__index = Core
 FastNet2.__index = FastNet2
-FastNet2.version = "0.0.5"
-FastNet2.build = 5
+FastNet2.version = "0.0.6"
+FastNet2.build = 6
 
 type Tany = { [any]: any }
 
@@ -19,9 +19,9 @@ local __threads: number = 350  -- default: 300
 local __callbacks: Tany = {}
 local __nets: Tany = {}
 local _toSend: Tany = {}
+local _signals: any = {}
 
 local initialized = false
-local _silentDebug = false -- off debug outputs and all debugs will be stored in debug cache
 
 local __currentMode: number = 2
 local LevelModes: Tany = {
@@ -36,11 +36,8 @@ if __threads < 200 or __threads >= 1.5e3 then
 end
 
 --// Services
-local HttpService = game:GetService("HttpService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
-local Players = game:GetService("Players")
 
 local IsServer = RunService:IsServer()
 local IsClient = RunService:IsClient()
@@ -51,7 +48,7 @@ local Threads: any = require(script:WaitForChild("Thread"))
 
 local Nets: any
 local _NetEvent: RemoteEvent
--- local _NetInvoke: RemoteFunction
+local _NetInvoke: RemoteFunction
 if not script:FindFirstChild("Net") then
 	Nets = Instance.new("Folder", script)
 	Nets.Name = "Net"
@@ -64,12 +61,6 @@ if not Nets:FindFirstChild("Event") then
 else
 	_NetEvent = Nets:WaitForChild("Event")
 end
--- if not Nets:FindFirstChild("Invoke") then
--- 	_NetInvoke = Instance.new("RemoteFunction", Nets)
--- 	_NetInvoke.Name = "Invoke"
--- else
--- 	_NetInvoke = Nets:WaitForChild("Invoke")
--- end
 
 if _maxRate_perEvent < 1 or _maxRate_perEvent >= math.huge then
 	_maxRate_perEvent = 500
@@ -77,8 +68,9 @@ end
 
 --// Internal Functions
 function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
-	Debug.__direct_debug(initialized == true, "[FastNet2]: couldn't re-configure internal system settings [Already set].", 2)
+	Debug.__direct_debug(initialized == false, "[FastNet2]: couldn't re-configure internal system settings [Already set].", 2)
 	if not initialized then
+		initialized = true
 		if level ~= nil and typeof(level) == "number" then
 			__currentMode = level
 		end
@@ -115,6 +107,10 @@ function IsExist(remoteName: string): boolean
 	return false
 end
 
+function _createId(): number
+	return math.random(math.random(29, 97), math.random(1033, math.random(13301, 255067)))
+end
+
 function _findIdentifier(IdentifierName: string): boolean
 	return _toSend[IdentifierName] and true or false
 end
@@ -142,6 +138,12 @@ function _removeIdentifier(IdentifierName: string): boolean
 	end
 	return _findIdentifier(IdentifierName)
 end
+function _createSignal(remoteName: string)
+	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Couldn't create signal, Spesific remote not exists.", 2)
+	if __nets[remoteName] and _signals[remoteName] == nil then
+		_signals[remoteName] = {}
+	end
+end
 
 --// APIs
 function Core.init(enableDebugs: boolean, levelForPrimaryModeThreads: number?): any
@@ -151,7 +153,6 @@ function Core.init(enableDebugs: boolean, levelForPrimaryModeThreads: number?): 
 	end
 	Debug.set_debug(enableDebugs or true)
 	reConfigure(levelForPrimaryModeThreads)
-	initialized = true
 	return table.freeze(FastNet2)
 end
 
@@ -198,6 +199,7 @@ end
 
 function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
+	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2)
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
@@ -210,36 +212,29 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			until result == true
 			finish = true
 		end)
-		--local _yield = coroutine.create(function()
-		--	repeat
-		--		result = IsExist(remoteName)
-		--		task.wait()
-		--	until result == true
-		--	finish = true
-		--end)
-		--coroutine.resume(_yield)
 		while (finish == false) do
 			if (tick() - _t) >= waitFor then
 				finish = true
 				task.cancel(_yield)
-				--coroutine.close(_yield)
 				break
 			end
 			task.wait()
 		end
 	end
+	_createSignal(remoteName)
 	_createIdentifier(remoteName)
 	local __new: Tany = {}
 	local __disconnected = false
 	-- functions
 	function __new:Wait() -- EXPERIMENTAL
-		local _now,this = tick(), math.random(math.random(29, 97), math.random(1033, math.random(13301, 255067)))
+		local _now,this = tick(), _createId()
 		local val,_on = 0,true
-		__callbacks[remoteName]["_signal"..this] = function()
+		_signals[remoteName]["_signal"..this] = function()
 			val = tick()
 			_on = false
 		end
 		repeat task.wait() until _on == false
+		_signals[remoteName]["_signal"..this] = nil
 		return (val-_now)
 	end
 	function __new:wait()
@@ -264,18 +259,18 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		__callbacks[remoteName]["_type"] = __nets[remoteName]._type
 	end
 	function __new:listen(waitTill: boolean | any, callbacks: any)
+		return self:Listen(waitTill, callbacks)
+	end
+	function __new:Once(waitTill: boolean | any, callbacks: any)
 		self:Listen(waitTill, callbacks)
+		if __callbacks[remoteName] then
+			__callbacks[remoteName]["_once"] = true
+		end
+	end
+	function __new:once(waitTill: boolean | any, callbacks: any)
+		self:Once(waitTill, callbacks)
 	end
 	if __nets and __nets[remoteName]._type == "RemoteEvent" then
-		function __new:Once(waitTill: boolean | any, callbacks: any)
-			self:Listen(waitTill, callbacks)
-			if __callbacks[remoteName] then
-				__callbacks[remoteName]["_once"] = true
-			end
-		end
-		function __new:once(waitTill: boolean | any, callbacks: any)
-			self:Once(waitTill, callbacks)
-		end
 		function __new:Disconnect(message: string?)
 			if __new and __callbacks[remoteName] ~= nil and __disconnected == false then
 				if __callbacks[remoteName]["_once"] ~= nil then
@@ -284,7 +279,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				__callbacks[remoteName] = nil
 				__disconnected = true
 				if message and typeof(message) == "string" and message:len() > 0 then
-					Debug.__direct_debug(message:len() <= 0, string.format("[FastNet2]: %s", message), 2)
+					Debug.__direct_debug(message:len() <= 0, "[FastNet2]: "..message, 2)
 				end
 			end
 		end
@@ -330,6 +325,87 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		function __new:disconnected(): boolean
 			return self:Disconnected()
 		end
+	else
+		if IsServer then
+			function __new:Pull(player: Player, timeout: number, ...: any): any?
+				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2)
+				local _currentIdentifier: Tany = _toSend[remoteName]
+				if not _currentIdentifier then
+					if IsExist(remoteName) then
+						_currentIdentifier = _createIdentifier(remoteName)
+					end
+				end
+				if not _signals[remoteName] then
+					_createSignal(remoteName)
+				end
+				if timeout and typeof(timeout) == "number" then
+					if timeout < 5 then
+						timeout = 5
+					end
+				else
+					timeout = 5
+				end
+				local result, finish, _t, toreturn = false, false, tick(), nil
+				local _makeId = _createId()
+				local tosend: any = {...}
+				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
+					toreturn = (...)
+					finish = true
+				end
+				local _yield = task.spawn(function()
+					table.insert(_currentIdentifier, {player, {_makeId, tosend}})
+				end)
+				while (not finish) do
+					if (tick() - _t) >= timeout then
+						finish = true
+						task.cancel(_yield)
+						break
+					end
+					task.wait()
+				end
+				_signals[remoteName]["_invokeSignal".._makeId] = nil
+				return toreturn
+			end
+		else
+			function __new:Pull(timeout: number, ...: any): any?
+				local _currentIdentifier: Tany = _toSend[remoteName]
+				if not _currentIdentifier then
+					if IsExist(remoteName) then
+						_currentIdentifier = _createIdentifier(remoteName)
+					end
+				end
+				if not _signals[remoteName] then
+					_createSignal(remoteName)
+				end
+				if timeout and typeof(timeout) == "number" then
+					if timeout < 5 then
+						timeout = 5
+					end
+				else
+					timeout = 5
+				end
+				local result, finish, _t, toreturn = false, false, tick(), nil
+				local _makeId = _createId()
+				local tosend: any = {...}
+				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
+					toreturn = (...)
+					finish = true
+				end
+				local _yield = task.spawn(function()
+					table.insert(_currentIdentifier, {_makeId, tosend})
+				end)
+				while (not finish) do
+					if (tick() - _t) >= timeout then
+						finish = true
+						task.cancel(_yield)
+						break
+					end
+					task.wait()
+				end
+				_signals[remoteName]["_invokeSignal".._makeId] = nil
+				return toreturn
+			end
+		end
 	end
 	function __new:Destroy()
 		if __nets[remoteName] ~= nil then
@@ -368,11 +444,11 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 				or typeRemote == "remotefunction"
 				or typeRemote == "remotefunctions"
 			then
-				-- __nets[remoteName] = {
-				-- 	_type = "RemoteFunction",
-				-- 	name = remoteName
-				-- }
-				Debug.__direct_debug(1 ~= 1, "[FastNet2]: RemoteFunction features is currently not available.", 2)
+				__nets[remoteName] = {
+					_type = "RemoteFunction",
+					name = remoteName
+				}
+				-- Debug.__direct_debug(1 ~= 1, "[FastNet2]: RemoteFunction features is currently not available.", 2)
 			end
 		end
 	end
@@ -396,23 +472,54 @@ if IsServer then
 					and __callbacks[identifier] ~= nil
 					and __callbacks[identifier]["func"] ~= nil
 				then
-					if __callbacks[identifier] ~= nil then
-						for index, data in v do
-							if __callbacks[identifier] ~= nil then
-								Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-								if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
-									__callbacks[identifier] = nil
+					local to_returns_invoke: any = {}
+					local index_invokes: number = 0
+					for index, data in v do
+						if __callbacks[identifier] ~= nil then
+							if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+								local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
+								table.insert(to_returns_invoke, {data[1], {_call}})
+							elseif typeof(data[1]) == "table" then
+								for index, datas in table.unpack(v) do
+									if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+									end
+									v[index] = nil
 								end
+							else
+								Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+							end
+							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+								__callbacks[identifier] = nil
 							end
 						end
-						task.spawn(function()
-							for i,_call in __callbacks[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-						end)
 					end
+					task.spawn(function()
+						if #to_returns_invoke > 0 then
+							table.insert(_toSend[identifier], {plr, to_returns_invoke})
+						end
+						for i,_call in _signals[identifier] do
+							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								_call()
+							end
+						end
+					end)
+				elseif -- invoke response
+					_findIdentifier(identifier)
+					and IsExist(identifier)
+				then
+					for index, datas in table.unpack(v) do
+						if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+							Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+						end
+					end
+					task.spawn(function()
+						for i,_call in _signals[identifier] do
+							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								_call()
+							end
+						end
+					end)
 				end
 			end
 		end
@@ -430,47 +537,54 @@ elseif IsClient then
 					and __callbacks[identifier] ~= nil
 					and __callbacks[identifier]["func"] ~= nil
 				then
-					if __callbacks[identifier] ~= nil then
-						for index, data in _data do
-							if __callbacks[identifier] ~= nil then
+					local to_returns_invoke: any = {}
+					local index_invokes: number = 0
+					for index, data in _data do
+						if __callbacks[identifier] ~= nil then
+							if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+								local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
+								table.insert(to_returns_invoke, {data[1], {_call}})
+							elseif typeof(data[1]) == "table" then
+								for index, datas in table.unpack(_data) do
+									if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+									end
+									_data[index] = nil
+								end
+							else
 								Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
-								if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
-									__callbacks[identifier] = nil
-								end
+							end
+							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+								__callbacks[identifier] = nil
 							end
 						end
-						task.spawn(function()
-							for i,_call in __callbacks[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-						end)
 					end
-				end
-			else
-				if #_data[2] <= 0 then
-					break
-				end
-				if
-					_findIdentifier(_data[1])
-					and IsExist(_data[1])
-					and __callbacks[_data[1]] ~= nil
-					and __callbacks[_data[1]]["func"] ~= nil
+					task.spawn(function()
+						if #to_returns_invoke > 0 then
+							table.insert(_toSend[identifier], to_returns_invoke)
+						end
+						for i,_call in _signals[identifier] do
+							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								_call()
+							end
+						end
+					end)
+				elseif -- invoke response
+					_findIdentifier(identifier)
+					and IsExist(identifier)
 				then
-					if __callbacks[_data[1]] ~= nil then
-						Threads(__callbacks[_data[1]]["func"], table.unpack(_data[2] or {}))
-						if __callbacks[_data[1]]["_once"] ~= nil and __callbacks[_data[1]]["_once"] == true then
-							__callbacks[_data[1]] = nil
+					for index, datas in table.unpack(_data) do
+						if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+							Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
 						end
-						task.spawn(function()
-							for i,_call in __callbacks[_data[1]] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-						end)
 					end
+					task.spawn(function()
+						for i,_call in _signals[identifier] do
+							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								_call()
+							end
+						end
+					end)
 				end
 			end
 		end
