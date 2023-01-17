@@ -1,5 +1,9 @@
 [CHANGELOGS - FASTNET2]
 
+[0.0.7]
+- Improved system
+- Fixed bug
+
 [0.0.6]
 - RemoteFunction now supported (Beta)
 - minor improvements
