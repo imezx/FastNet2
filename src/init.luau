@@ -1,14 +1,14 @@
 --!strict
 
 -- FastNet2
--- v0.0.6-pre-alpha
+-- v0.0.7-pre-alpha
 local __load_s: any = tick()
 local Core = {}
 local FastNet2 = {}
 Core.__index = Core
 FastNet2.__index = FastNet2
-FastNet2.version = "0.0.6"
-FastNet2.build = 6
+FastNet2.version = "0.0.7"
+FastNet2.build = 7
 
 type Tany = { [any]: any }
 
@@ -20,6 +20,7 @@ local __callbacks: Tany = {}
 local __nets: Tany = {}
 local _toSend: Tany = {}
 local _signals: any = {}
+local _reDo: any = {}
 
 local initialized = false
 
@@ -480,6 +481,9 @@ if IsServer then
 								local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
 								table.insert(to_returns_invoke, {data[1], {_call}})
 							elseif typeof(data[1]) == "table" then
+								if __callbacks[identifier] ~= nil then
+									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								end
 								for index, datas in table.unpack(v) do
 									if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
 										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
@@ -545,11 +549,13 @@ elseif IsClient then
 								local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
 								table.insert(to_returns_invoke, {data[1], {_call}})
 							elseif typeof(data[1]) == "table" then
+								if __callbacks[identifier] ~= nil then
+									Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+								end
 								for index, datas in table.unpack(_data) do
 									if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
 										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
 									end
-									_data[index] = nil
 								end
 							else
 								Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
@@ -576,11 +582,17 @@ elseif IsClient then
 					for index, datas in table.unpack(_data) do
 						if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
 							Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+						else
+							if not _reDo[identifier] then
+								_reDo[identifier] = {}
+							end
+							table.insert(_reDo[identifier], _data)
 						end
 					end
 					task.spawn(function()
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								print("call signal")
 								_call()
 							end
 						end
@@ -595,6 +607,58 @@ end
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
 	if (os.clock() - __t) >= (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
+		task.spawn(function()
+			for identifier: string, _data in _reDo do
+				if typeof(identifier) == "string" and #_data > 0 then
+					_data = table.unpack(_data)
+					if #_data <= 0 then
+						break
+					end
+					if
+						_findIdentifier(identifier)
+						and IsExist(identifier)
+						and __callbacks[identifier] ~= nil
+						and __callbacks[identifier]["func"] ~= nil
+					then
+						local to_returns_invoke: any = {}
+						local index_invokes: number = 0
+						for index, data in _data do
+							if __callbacks[identifier] ~= nil then
+								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+									local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
+									table.insert(to_returns_invoke, {data[1], {_call}})
+								else
+									if __callbacks[identifier] ~= nil then
+										Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+									else
+										for index, datas in table.unpack(_data) do
+											if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+												Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+											end
+										end
+									end
+								end
+								if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+									__callbacks[identifier] = nil
+								end
+								table.remove(_data, index)
+							end
+						end
+						task.spawn(function()
+							if #to_returns_invoke > 0 then
+								table.insert(_toSend[identifier], to_returns_invoke)
+							end
+							for i,_call in _signals[identifier] do
+								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+									_call()
+								end
+							end
+						end)
+					end
+				end
+			end
+		end)
+		
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
