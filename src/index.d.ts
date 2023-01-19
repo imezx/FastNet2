@@ -12,10 +12,11 @@ interface FastNet2 {
     toBestFormNumber(num: number): number | string
     Get(remoteName: string, waitFor: number): any
     Create(remoteName: string, typeRemote: string): any
-    Dsend(): number
-    Dreceive(): number
+    up(): number
+    down(): number
     Wait(): number
     getProvider(toBool: boolean | undefined): any
+    _setdebug(On: boolean)
 }
 
 export default FastNet2

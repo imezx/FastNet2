@@ -3,9 +3,7 @@
 -- FastNet2
 -- v0.0.7-pre-alpha
 local __load_s: any = tick()
-local Core = {}
 local FastNet2 = {}
-Core.__index = Core
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.7"
 FastNet2.build = 7
@@ -65,6 +63,9 @@ end
 
 if _maxRate_perEvent < 1 or _maxRate_perEvent >= math.huge then
 	_maxRate_perEvent = 500
+end
+if IsClient then
+	Debug.set_debug(false)
 end
 
 --// Internal Functions
@@ -147,14 +148,19 @@ function _createSignal(remoteName: string)
 end
 
 --// APIs
-function Core.init(enableDebugs: boolean, levelForPrimaryModeThreads: number?): any
-	Debug.__direct_debug(typeof(enableDebugs) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
-	if levelForPrimaryModeThreads ~= nil then
-		Debug.__direct_debug(typeof(levelForPrimaryModeThreads) == "number", "[FastNet2]: Invalid type of level mode", 2)
-	end
-	Debug.set_debug(enableDebugs or true)
-	reConfigure(levelForPrimaryModeThreads)
-	return table.freeze(FastNet2)
+--function Core.init(enableDebugs: boolean, levelForPrimaryModeThreads: number?): any
+--	Debug.__direct_debug(typeof(enableDebugs) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
+--	if levelForPrimaryModeThreads ~= nil then
+--		Debug.__direct_debug(typeof(levelForPrimaryModeThreads) == "number", "[FastNet2]: Invalid type of level mode", 2)
+--	end
+--	Debug.set_debug(enableDebugs or true)
+--	reConfigure(levelForPrimaryModeThreads)
+--	return table.freeze(FastNet2)
+--end
+
+function FastNet2._setdebug(On: boolean)
+	Debug.__direct_debug(typeof(On) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
+	Debug.set_debug(On or true)
 end
 
 function FastNet2.getdebugcache(maxrange: number): Tany
@@ -531,10 +537,7 @@ if IsServer then
 elseif IsClient then
 	_NetEvent.OnClientEvent:Connect(function(pkg)
 		for identifier: string, _data in pkg do
-			if typeof(identifier) == "string" then
-				if #_data[1] <= 0 then
-					break
-				end
+			if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
 				if
 					_findIdentifier(identifier)
 					and IsExist(identifier)
@@ -592,7 +595,6 @@ elseif IsClient then
 					task.spawn(function()
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-								print("call signal")
 								_call()
 							end
 						end
@@ -609,11 +611,8 @@ RunService.PostSimulation:Connect(function()
 	if (os.clock() - __t) >= (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
 		task.spawn(function()
 			for identifier: string, _data in _reDo do
-				if typeof(identifier) == "string" and #_data > 0 then
+				if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
 					_data = table.unpack(_data)
-					if #_data <= 0 then
-						break
-					end
 					if
 						_findIdentifier(identifier)
 						and IsExist(identifier)
@@ -758,5 +757,6 @@ RunService.PostSimulation:Connect(function()
 	end
 end)
 
-warn(string.format("FastNet2 initialized [%s | %sms]", __getProvider(), (tick() - __load_s)*1000))
-return table.freeze(Core)
+reConfigure(__currentMode or 2)
+warn(string.format("FastNet2 initialized [ver_%s | %s | %sms]", FastNet2.version, __getProvider(), (tick() - __load_s)*1000))
+return table.freeze(FastNet2)
