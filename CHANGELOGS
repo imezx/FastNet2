@@ -1,5 +1,12 @@
 [CHANGELOGS - FASTNET2]
 
+[0.0.7 - PATCH 1/REPLACE]
+- Removed .__init (now you dont required to init first to use the module)
+- added ._setdebug for set debug option
+- debug automaticly off on client
+- removed a print
+- minor fix
+
 [0.0.7]
 - Improved system
 - Fixed bug
