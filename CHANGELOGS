@@ -1,5 +1,11 @@
 [CHANGELOGS - FASTNET2]
 
+[0.0.7 - PATCH 2/REPLACE]
+- Improved Thread.luau
+- Improved Debug.luau
+- Some changes for improvements
+- Improve preventing memory leaks
+
 [0.0.7 - PATCH 1/REPLACE]
 - Removed .__init (now you dont required to init first to use the module)
 - added ._setdebug for set debug option
