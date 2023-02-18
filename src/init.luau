@@ -1,11 +1,11 @@
 --!strict
 
 -- FastNet2
--- v0.0.7-pre-alpha
+-- v0.0.7p2-pre-alpha
 local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = "0.0.7"
+FastNet2.version = "0.0.7-p2"
 FastNet2.build = 7
 
 type Tany = { [any]: any }
@@ -13,7 +13,7 @@ type Tany = { [any]: any }
 --// Settings
 local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
 local _maxRate_perEvent: number = 500 -- default: 500
-local __threads: number = 350  -- default: 300
+local __threads: number = 25  -- default: 50
 local __callbacks: Tany = {}
 local __nets: Tany = {}
 local _toSend: Tany = {}
@@ -27,11 +27,10 @@ local LevelModes: Tany = {
 	[1] = "Low",
 	[2] = "Default",
 	[3] = "High",
-	[4] = "Max",
 }
 
-if __threads < 200 or __threads >= 1.5e3 then
-	__threads = 200
+if __threads < 25 or __threads > 100 then
+	__threads = 25
 end
 
 --// Services
@@ -79,19 +78,17 @@ function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
 		if not LevelModes[__currentMode] then
 			__currentMode = 2
 		end
-		if __currentMode == 4 then
-			__threads = 1500
-		elseif __currentMode == 3 then
-			__threads = 650
+		if __currentMode == 3 then
+			__threads = 100
 		elseif __currentMode == 2 then
-			__threads = 350
+			__threads = 50
 		else
-			__threads = 200
+			__threads = 25
 		end
 		Threads = Threads.__start(__threads)
 	end
-	if __threads < 200 or __threads >= 1.5e3 then
-		__threads = 200
+	if __threads < 25 or __threads > 100 then
+		__threads = 25
 	end
 	return LevelModes[__currentMode]
 end
@@ -110,7 +107,7 @@ function IsExist(remoteName: string): boolean
 end
 
 function _createId(): number
-	return math.random(math.random(29, 97), math.random(1033, math.random(13301, 255067)))
+	return math.random(math.random(21, 97), math.random(1033, math.random(13301, 255067)))
 end
 
 function _findIdentifier(IdentifierName: string): boolean
@@ -507,6 +504,7 @@ if IsServer then
 					task.spawn(function()
 						if #to_returns_invoke > 0 then
 							table.insert(_toSend[identifier], {plr, to_returns_invoke})
+							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
@@ -533,6 +531,7 @@ if IsServer then
 				end
 			end
 		end
+		table.clear(pkg) -- prevent memory leaks?
 	end)
 elseif IsClient then
 	_NetEvent.OnClientEvent:Connect(function(pkg)
@@ -571,6 +570,7 @@ elseif IsClient then
 					task.spawn(function()
 						if #to_returns_invoke > 0 then
 							table.insert(_toSend[identifier], to_returns_invoke)
+							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
@@ -602,6 +602,7 @@ elseif IsClient then
 				end
 			end
 		end
+		table.clear(pkg) -- prevent memory leaks?
 	end)
 end
 
@@ -657,7 +658,7 @@ RunService.PostSimulation:Connect(function()
 				end
 			end
 		end)
-		
+
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
@@ -759,4 +760,5 @@ end)
 
 reConfigure(__currentMode or 2)
 warn(string.format("FastNet2 initialized [ver_%s | %s | %sms]", FastNet2.version, __getProvider(), (tick() - __load_s)*1000))
+
 return table.freeze(FastNet2)

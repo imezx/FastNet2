@@ -24,16 +24,17 @@ SOFTWARE.
 
 --!strict
 local ThreadPool = {}
+local threadIndex: number = 0
 local function passer(toRun, ...)
 	toRun(...)
 end
 
-function ThreadPool.__start(threadIndex: number) -- How many threads to pre-allocate
+function ThreadPool.__start(indexs: number) -- How many threads to pre-allocate
+	threadIndex = indexs
 	local threads = table.create(threadIndex)
 
 	local function runner(thread: thread): never
 		while true do
-			-- Get function and parameters
 			-- Run the function
 			passer(coroutine.yield())
 
@@ -48,8 +49,18 @@ function ThreadPool.__start(threadIndex: number) -- How many threads to pre-allo
 		coroutine.resume(thread, thread)
 		threads[i] = thread
 	end
-	
+
 	return function<_, params>(func: (params) -> (), ...: params): (thread)
+		-- Xthread 1.0 Feature (free brute-threading)
+		if threadIndex < 25 or threadIndex <= 0 then
+			threadIndex = 0
+			for i=1,5 do
+				local thread = coroutine.create(runner)
+				coroutine.resume(thread, thread)
+				threads[threadIndex+1] = thread
+				threadIndex += 1
+			end
+		end
 		if threadIndex ~= 0 then
 			-- Thread available
 			local thread = threads[threadIndex]

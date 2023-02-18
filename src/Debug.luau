@@ -1,4 +1,5 @@
 --!strict
+local RunService = game:GetService("RunService")
 local _ableDebug:boolean = true
 local debugsCache: any = {}
 local levels: any = {
@@ -6,6 +7,21 @@ local levels: any = {
 	[2] = warn,
 	[3] = error,
 }
+
+local _p = tick()
+local ranges = 0
+RunService.PostSimulation:Connect(function()
+	if (tick() - _p) >= 1 then
+		ranges = 0
+		for i,v in debugsCache do
+			ranges += 1
+		end
+		if ranges > 500 then
+			table.clear(debugsCache)
+		end
+		_p = tick()
+	end
+end)
 
 function set_debug(x : boolean)
 	if typeof(x) == "boolean" then
@@ -16,7 +32,9 @@ end
 function get_debugs_inrange(range: number): any
 	if not _ableDebug then
 		if range == nil or typeof(range) ~= "number" then
-			range = 1000
+			range = 100
+		elseif typeof(range) == "number" and range > 500 then
+			range = 100
 		end
 		local toReturn = {}
 		for i,v in debugsCache do
