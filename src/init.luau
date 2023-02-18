@@ -277,7 +277,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	function __new:once(waitTill: boolean | any, callbacks: any)
 		self:Once(waitTill, callbacks)
 	end
-	if __nets and __nets[remoteName]._type == "RemoteEvent" then
+	if __nets and __nets[remoteName] and __nets[remoteName]._type == "RemoteEvent" then
 		function __new:Disconnect(message: string?)
 			if __new and __callbacks[remoteName] ~= nil and __disconnected == false then
 				if __callbacks[remoteName]["_once"] ~= nil then
