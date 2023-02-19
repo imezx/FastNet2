@@ -1,15 +1,7 @@
 [CHANGELOGS - FASTNET2]
 
-<<<<<<< HEAD
-[0.0.7 - PATCH 2/REPLACE]
-- Improved Thread.luau
-- Improved Debug.luau
-- Some changes for improvements
-- Improve preventing memory leaks
-=======
 [0.0.8e - PRE_BUILT]
 - Added Encoding & Decoding 1.0 Feature (default off)
->>>>>>> cfbe224 (v0.0.8e)
 
 [0.0.7 - PATCH 1/REPLACE]
 - Removed .__init (now you dont required to init first to use the module)
