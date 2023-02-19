@@ -1,6 +1,6 @@
 [package]
 name = "imezx/fastnet2"
-version = "0.0.7"
+version = "0.0.8e"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 license = "MIT"

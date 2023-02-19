@@ -1,12 +1,12 @@
 --!strict
 
 -- FastNet2
--- v0.0.7p2-pre-alpha
+-- v0.0.8e-pre-alpha
 local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = "0.0.7-p2"
-FastNet2.build = 7
+FastNet2.version = "0.0.8e"
+FastNet2.build = 7.5
 
 type Tany = { [any]: any }
 
@@ -14,6 +14,9 @@ type Tany = { [any]: any }
 local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
 local _maxRate_perEvent: number = 500 -- default: 500
 local __threads: number = 25  -- default: 50
+local __currentMode: number = 2
+local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
+
 local __callbacks: Tany = {}
 local __nets: Tany = {}
 local _toSend: Tany = {}
@@ -22,7 +25,6 @@ local _reDo: any = {}
 
 local initialized = false
 
-local __currentMode: number = 2
 local LevelModes: Tany = {
 	[1] = "Low",
 	[2] = "Default",
@@ -41,8 +43,9 @@ local IsServer = RunService:IsServer()
 local IsClient = RunService:IsClient()
 
 --// Load Utils
-local Debug = require(script:WaitForChild("Debug"))
+local Debug: any = require(script:WaitForChild("Debug"))
 local Threads: any = require(script:WaitForChild("Thread"))
+local Driver: any = require(script:WaitForChild("Driver"))
 
 local Nets: any
 local _NetEvent: RemoteEvent
@@ -485,6 +488,13 @@ if IsServer then
 								table.insert(to_returns_invoke, {data[1], {_call}})
 							elseif typeof(data[1]) == "table" then
 								if __callbacks[identifier] ~= nil then
+									if _enableEncoding then
+										if typeof(data) == "table" then
+											for indexs, to_encode in data do
+												data[indexs] = Driver.dec(to_encode)
+											end
+										end
+									end
 									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 								end
 								for index, datas in table.unpack(v) do
@@ -494,6 +504,13 @@ if IsServer then
 									v[index] = nil
 								end
 							else
+								if _enableEncoding then
+									if typeof(data) == "table" then
+										for indexs, to_encode in data do
+											data[indexs] = Driver.dec(to_encode)
+										end
+									end
+								end
 								Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 							end
 							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
@@ -658,7 +675,24 @@ RunService.PostSimulation:Connect(function()
 				end
 			end
 		end)
-
+		-- Encoder
+		if _enableEncoding then
+			for identifier: string, packages in _toSend do
+				if IsClient then
+					if typeof(packages) == "table" and #packages > 0 then
+						local encoded = packages
+						for i,datas in encoded do
+							if typeof(datas) == "table" then
+								for index, _d in datas do
+									encoded[i][index] = Driver.enc(_d)
+								end
+							end
+						end
+						_toSend[identifier] = encoded
+					end
+				end
+			end
+		end
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
