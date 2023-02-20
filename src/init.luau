@@ -6,7 +6,7 @@ local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8e"
-FastNet2.build = 7.5
+FastNet2.build = 7.6
 
 type Tany = { [any]: any }
 
@@ -16,6 +16,18 @@ local _maxRate_perEvent: number = 500 -- default: 500
 local __threads: number = 25  -- default: 50
 local __currentMode: number = 2
 local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
+local smooth_mode: number = 2 -- default: 2, Modes: 1 (Low 30), 2 (Normal 60), 3 (High 90), 4 (Ultra 120)
+if smooth_mode == 1 then
+	smooth_mode = (1 / 30 - 0.00015)
+elseif smooth_mode == 2 then
+	smooth_mode = (1 / 60 - 0.00015)
+elseif smooth_mode == 3 then
+	smooth_mode = (1 / 90 - 0.00015)
+elseif smooth_mode == 4 then
+	smooth_mode = (1 / 120 - 0.00015)
+else
+	smooth_mode = (1 / 60 - 0.00015) -- to normal
+end
 
 local __callbacks: Tany = {}
 local __nets: Tany = {}
@@ -626,7 +638,7 @@ end
 -- Internal Events Handler
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
-	if (os.clock() - __t) >= (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
+	if (os.clock() - __t) >= smooth_mode or (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
 		task.spawn(function()
 			for identifier: string, _data in _reDo do
 				if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
