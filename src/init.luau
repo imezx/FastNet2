@@ -82,7 +82,7 @@ local Threads: any = require(script:WaitForChild("Thread"))
 local Driver: any = require(script:WaitForChild("Driver"))
 
 if _enableEncoding then
-	Debug.__direct_debug(_enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
+	Debug.__direct_debug(_enableEncoding == false, "[FastNet2]: Encode is enabled.", 2)
 end
 
 local Nets: any
