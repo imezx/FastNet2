@@ -2,21 +2,35 @@
 
 -- FastNet2
 -- v0.0.8e-pre-alpha
+assert(script:IsDescendantOf(game:GetService("ReplicatedStorage")), "Please place the FastNet2 module into ReplicatedStorage.")
+
 local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8e"
-FastNet2.build = 7.7
+FastNet2.build = 7.8
 
 type Tany = { [any]: any }
 
 --// Settings
 local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
 local _maxRate_perEvent: number = 500 -- default: 500
-local __threads: number = 25  -- default: 50
+local __threads: number = 50  -- default: 50
 local __currentMode: number = 2
 local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
 local smooth_mode: number = 2 -- default: 2, Modes: 1 (Low 30), 2 (Normal 60), 3 (High 90), 4 (Ultra 120)
+local useb64: boolean = false -- default: false, if it false it will use binary instead else base64
+
+if typeof(_enableLimitingRate) ~= "boolean" then
+	_enableLimitingRate = true
+end
+if typeof(_enableEncoding) ~= "boolean" then
+	_enableEncoding = false
+end
+if typeof(useb64) ~= "boolean" then
+	useb64 = false
+end
+
 if smooth_mode == 1 then
 	smooth_mode = (1 / 30 - 0.00015)
 elseif smooth_mode == 2 then
@@ -27,6 +41,14 @@ elseif smooth_mode == 4 then
 	smooth_mode = (1 / 120 - 0.00015)
 else
 	smooth_mode = (1 / 60 - 0.00015) -- to normal
+end
+
+if _maxRate_perEvent ~= nil then
+	if _maxRate_perEvent < 1 or _maxRate_perEvent >= math.huge then
+		_maxRate_perEvent = 500
+	end
+else
+	_maxRate_perEvent = 500
 end
 
 local __callbacks: Tany = {}
@@ -48,8 +70,8 @@ if __threads < 25 or __threads > 100 then
 end
 
 --// Services
-local RunService = game:GetService("RunService")
 local StatsService = game:GetService("Stats")
+local RunService = game:GetService("RunService")
 
 local IsServer = RunService:IsServer()
 local IsClient = RunService:IsClient()
@@ -58,6 +80,10 @@ local IsClient = RunService:IsClient()
 local Debug: any = require(script:WaitForChild("Debug"))
 local Threads: any = require(script:WaitForChild("Thread"))
 local Driver: any = require(script:WaitForChild("Driver"))
+
+if _enableEncoding then
+	Debug.__direct_debug(_enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
+end
 
 local Nets: any
 local _NetEvent: RemoteEvent
@@ -75,9 +101,6 @@ else
 	_NetEvent = Nets:WaitForChild("Event")
 end
 
-if _maxRate_perEvent < 1 or _maxRate_perEvent >= math.huge then
-	_maxRate_perEvent = 500
-end
 if IsClient then
 	Debug.set_debug(false)
 end
@@ -125,6 +148,7 @@ function _createId(): number
 	return math.random(math.random(21, 97), math.random(1033, math.random(13301, 255067)))
 end
 
+-- Identifier
 function _findIdentifier(IdentifierName: string): boolean
 	return _toSend[IdentifierName] and true or false
 end
@@ -183,13 +207,12 @@ function FastNet2.getProvider(toBool: boolean?): any
 	return __getProvider(toBool or false)
 end
 
-function FastNet2.toBestFormNumber(num: number): number | string
-	local _tostring = tostring(num)
-	if #_tostring <= 7 then
-		return _tostring
-	else
-		return num
-	end
+function FastNet2.CreateUUID(): string
+	return Driver.CreateUUID()
+end
+
+function FastNet2.toBestFormNum(num: number): number | string
+	return Driver.toBestFormNum(num)
 end
 
 function FastNet2:Wait(): number
@@ -326,16 +349,25 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			end
 		else
 			function __new:Fire(...: any)
-				local _currentIdentifier: Tany = _toSend[remoteName]
-				if not _currentIdentifier then
+				if not _toSend[remoteName] then
 					if IsExist(remoteName) then
-						_currentIdentifier = _createIdentifier(remoteName)
+						_createIdentifier(remoteName)
+					else
+						return
 					end
 				end
-				if _enableLimitingRate and #_currentIdentifier > (_maxRate_perEvent or 500) then -- rate limit for client only
-					return -- reject
+				--local _currentIdentifier: Tany = _toSend[remoteName]
+				--if not _currentIdentifier then
+				--	if IsExist(remoteName) then
+				--		_currentIdentifier = _createIdentifier(remoteName)
+				--	end
+				--end
+				if _enableLimitingRate then -- rate limit for client only
+					if #_toSend[remoteName] > (_maxRate_perEvent or 500) then
+						return -- reject
+					end
 				end
-				table.insert(_currentIdentifier, { ... })
+				table.insert(_toSend[remoteName], { ... })
 			end
 		end
 		function __new:Disconnected(): boolean
@@ -385,6 +417,9 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				_signals[remoteName]["_invokeSignal".._makeId] = nil
 				return toreturn
 			end
+			function __new:pull(player: Player, timeout: number, ...: any): any?
+				return self:Pull(player, timeout, ...)
+			end
 		else
 			function __new:Pull(timeout: number, ...: any): any?
 				local _currentIdentifier: Tany = _toSend[remoteName]
@@ -423,6 +458,9 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				end
 				_signals[remoteName]["_invokeSignal".._makeId] = nil
 				return toreturn
+			end
+			function __new:pull(player: Player, timeout: number, ...: any): any?
+				return self:Pull(player, timeout, ...)
 			end
 		end
 	end
@@ -480,6 +518,7 @@ end
 
 if IsServer then
 	_NetEvent.OnServerEvent:Connect(function(plr, pkg)
+		debug.profilebegin("FastNet2.server")
 		for identifier: string, v in pkg do
 			if typeof(identifier) == "string" then
 				if #v <= 0 then
@@ -503,7 +542,7 @@ if IsServer then
 									if _enableEncoding then
 										if typeof(data) == "table" then
 											for indexs, to_encode in data do
-												data[indexs] = Driver.dec(to_encode)
+												data[indexs] = Driver.dec(useb64 or false, to_encode)
 											end
 										end
 									end
@@ -519,7 +558,7 @@ if IsServer then
 											if _enableEncoding then
 												if typeof(datas) == "table" then
 													for indexs, to_encode in datas do
-														datas[indexs] = Driver.dec(to_encode)
+														datas[indexs] = Driver.dec(useb64 or false, to_encode)
 													end
 												end
 											end
@@ -533,10 +572,10 @@ if IsServer then
 											for indexs, to_encode in _cb do
 												if typeof(to_encode) == "table" then
 													for _i,x in to_encode do
-														_cb[indexs][_i] = Driver.dec(x)
+														_cb[indexs][_i] = Driver.dec(useb64 or false, x)
 													end
 												else
-													_cb[indexs] = Driver.dec(to_encode)
+													_cb[indexs] = Driver.dec(useb64 or false, to_encode)
 												end
 											end
 										end
@@ -549,7 +588,7 @@ if IsServer then
 								if _enableEncoding then
 									if typeof(data) == "table" then
 										for indexs, to_encode in data do
-											data[indexs] = Driver.dec(to_encode)
+											data[indexs] = Driver.dec(useb64 or false, to_encode)
 										end
 									end
 								end
@@ -565,11 +604,13 @@ if IsServer then
 							table.insert(_toSend[identifier], {plr, to_returns_invoke})
 							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
+						debug.profilebegin("signal")
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
 								_call()
 							end
 						end
+						debug.profileend()
 					end)
 				elseif -- invoke response
 					_findIdentifier(identifier)
@@ -581,19 +622,23 @@ if IsServer then
 						end
 					end
 					task.spawn(function()
+						debug.profilebegin("signal")
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
 								_call()
 							end
 						end
+						debug.profileend()
 					end)
 				end
 			end
 		end
+		debug.profileend()
 		table.clear(pkg) -- prevent memory leaks?
 	end)
 elseif IsClient then
 	_NetEvent.OnClientEvent:Connect(function(pkg)
+		debug.profilebegin("FastNet2.client")
 		for identifier: string, _data in pkg do
 			if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
 				if
@@ -640,11 +685,13 @@ elseif IsClient then
 							table.insert(_toSend[identifier], to_returns_invoke)
 							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
+						debug.profilebegin("signal")
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
 								_call()
 							end
 						end
+						debug.profileend()
 					end)
 				elseif -- invoke response
 					_findIdentifier(identifier)
@@ -665,15 +712,18 @@ elseif IsClient then
 						end
 					end
 					task.spawn(function()
+						debug.profilebegin("signal")
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
 								_call()
 							end
 						end
+						debug.profileend()
 					end)
 				end
 			end
 		end
+		debug.profileend()
 		table.clear(pkg) -- prevent memory leaks?
 	end)
 end
@@ -682,7 +732,9 @@ end
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
 	if (os.clock() - __t) >= smooth_mode or (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
+		debug.profilebegin("FastNet2.Internal")
 		task.spawn(function()
+			debug.profilebegin("redo")
 			for identifier: string, _data in _reDo do
 				if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
 					_data = table.unpack(_data)
@@ -729,24 +781,25 @@ RunService.PostSimulation:Connect(function()
 					end
 				end
 			end
+			debug.profileend()
 		end)
 		-- Encoder
-		if _enableEncoding then
+		if IsClient and _enableEncoding then
+			debug.profilebegin("encode")
 			for identifier: string, packages in _toSend do
-				if IsClient then
-					if typeof(packages) == "table" and #packages > 0 then
-						local encoded = packages
-						for i,datas in encoded do
-							if typeof(datas) == "table" then
-								for index, _d in datas do
-									encoded[i][index] = Driver.enc(_d)
-								end
+				if typeof(packages) == "table" and #packages > 0 then
+					local encoded = packages
+					for i,datas in encoded do
+						if typeof(datas) == "table" then
+							for index, _d in datas do
+								encoded[i][index] = Driver.enc(useb64 or false, _d)
 							end
 						end
-						_toSend[identifier] = encoded
 					end
+					_toSend[identifier] = encoded
 				end
 			end
+			debug.profileend()
 		end
 		local to_send: Tany = {
 			["Server"] = {},
@@ -756,6 +809,7 @@ RunService.PostSimulation:Connect(function()
 		local __reach_c_max: boolean = false
 		local __Sindex: number = 0
 		local __Cindex: number = 0
+		debug.profilebegin("process")
 		for identifier: string, packages in _toSend do
 			if __reach_s_max and __reach_c_max then
 				break
@@ -842,8 +896,10 @@ RunService.PostSimulation:Connect(function()
 		elseif IsClient and __Cindex > 0 then
 			_NetEvent:FireServer(to_send["Client"])
 		end
+		debug.profileend()
 		table.clear(to_send) -- prevent memory leaks?
 		__t = os.clock()
+		debug.profileend()
 	end
 end)
 

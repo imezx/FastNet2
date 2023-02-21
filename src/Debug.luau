@@ -12,13 +12,17 @@ local _p = tick()
 local ranges = 0
 RunService.PostSimulation:Connect(function()
 	if (tick() - _p) >= 1 then
+		debug.profilebegin("FastNet2.debug")
 		ranges = 0
 		for i,v in debugsCache do
 			ranges += 1
 		end
 		if ranges > 500 then
+			debug.profilebegin("wipe")
 			table.clear(debugsCache)
+			debug.profileend()
 		end
+		debug.profileend()
 		_p = tick()
 	end
 end)
