@@ -6,7 +6,7 @@ local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8e"
-FastNet2.build = 7.6
+FastNet2.build = 7.7
 
 type Tany = { [any]: any }
 
@@ -509,11 +509,41 @@ if IsServer then
 									end
 									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 								end
-								for index, datas in table.unpack(v) do
-									if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+								for _index, datas in table.unpack(v) do
+									if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+										if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
+											if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+												Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+											end
+										elseif plr and identifier ~= nil and __callbacks[identifier] ~= nil and __callbacks[identifier]["func"] ~= nil then
+											if _enableEncoding then
+												if typeof(datas) == "table" then
+													for indexs, to_encode in datas do
+														datas[indexs] = Driver.dec(to_encode)
+													end
+												end
+											end
+											Threads(__callbacks[identifier]["func"], plr, table.unpack(datas or {}))
+										else
+											v[_index] = nil
+										end
+									elseif plr and identifier ~= nil and __callbacks[identifier] ~= nil and __callbacks[identifier]["func"] ~= nil and datas ~= nil then
+										local _cb = {datas}
+										if _enableEncoding then
+											for indexs, to_encode in _cb do
+												if typeof(to_encode) == "table" then
+													for _i,x in to_encode do
+														_cb[indexs][_i] = Driver.dec(x)
+													end
+												else
+													_cb[indexs] = Driver.dec(to_encode)
+												end
+											end
+										end
+										Threads(__callbacks[identifier]["func"], plr, table.unpack(_cb or {}))
+									else
+										v[_index] = nil
 									end
-									v[index] = nil
 								end
 							else
 								if _enableEncoding then
@@ -583,9 +613,18 @@ elseif IsClient then
 								if __callbacks[identifier] ~= nil then
 									Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
 								end
-								for index, datas in table.unpack(_data) do
-									if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+								for _index, datas in table.unpack(_data) do
+									if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+										if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
+											if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+												Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+											else
+												if not _reDo[identifier] then
+													_reDo[identifier] = {}
+												end
+												table.insert(_reDo[identifier], _data)
+											end
+										end
 									end
 								end
 							else
@@ -612,13 +651,17 @@ elseif IsClient then
 					and IsExist(identifier)
 				then
 					for index, datas in table.unpack(_data) do
-						if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-							Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
-						else
-							if not _reDo[identifier] then
-								_reDo[identifier] = {}
+						if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+							if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
+								if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+									Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+								else
+									if not _reDo[identifier] then
+										_reDo[identifier] = {}
+									end
+									table.insert(_reDo[identifier], _data)
+								end
 							end
-							table.insert(_reDo[identifier], _data)
 						end
 					end
 					task.spawn(function()
