@@ -8,7 +8,7 @@ local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8e"
-FastNet2.build = 7.8
+FastNet2.build = 7.9
 
 type Tany = { [any]: any }
 
@@ -18,8 +18,8 @@ local _maxRate_perEvent: number = 500 -- default: 500
 local __threads: number = 50  -- default: 50
 local __currentMode: number = 2
 local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
-local smooth_mode: number = 2 -- default: 2, Modes: 1 (Low 30), 2 (Normal 60), 3 (High 90), 4 (Ultra 120)
-local useb64: boolean = false -- default: false, if it false it will use binary instead else base64
+local smooth_mode: number =  2-- default: 2, Modes: 1 (Low 30), 2 (Normal 60), 3 (High 90), 4 (Ultra 120)
+local useb64: boolean = false -- default: false, if it false it will use binary instead else base64 for encode
 
 if typeof(_enableLimitingRate) ~= "boolean" then
 	_enableLimitingRate = true

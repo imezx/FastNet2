@@ -5,11 +5,9 @@ local lookupASCIIToValue = {} :: { [number]: number }
 local alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 
 for index = 1, #alphabet do
-	local value = index - 1
 	local ascii = string.byte(alphabet, index)
-
-	lookupValueToASCII[value] = ascii
-	lookupASCIIToValue[ascii] = value
+	lookupValueToASCII[index - 1] = ascii
+	lookupASCIIToValue[ascii] = index - 1
 end
 
 lookupASCIIToValue[string.byte("=")] = 0
