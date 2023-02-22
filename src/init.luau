@@ -20,6 +20,7 @@ local __currentMode: number = 2
 local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
 local smooth_mode: number =  2-- default: 2, Modes: 1 (Low 30), 2 (Normal 60), 3 (High 90), 4 (Ultra 120)
 local useb64: boolean = false -- default: false, if it false it will use binary instead else base64 for encode
+local waitPlr: boolean = false -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
 
 if typeof(_enableLimitingRate) ~= "boolean" then
 	_enableLimitingRate = true
@@ -72,6 +73,7 @@ end
 --// Services
 local StatsService = game:GetService("Stats")
 local RunService = game:GetService("RunService")
+local Players = game:GetService("Players")
 
 local IsServer = RunService:IsServer()
 local IsClient = RunService:IsClient()
@@ -82,7 +84,7 @@ local Threads: any = require(script:WaitForChild("Thread"))
 local Driver: any = require(script:WaitForChild("Driver"))
 
 if _enableEncoding then
-	Debug.__direct_debug(_enableEncoding == false, "[FastNet2]: Encode is enabled.", 2)
+	Debug.__direct_debug(_enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
 end
 
 local Nets: any
@@ -104,6 +106,45 @@ end
 if IsClient then
 	Debug.set_debug(false)
 end
+
+local PlayerStatus: Tany = {}
+--if IsServer and waitPlr then
+--	Players.PlayerAdded:Connect(function(player)
+--		if player then
+--			if not PlayerStatus[player.Name] then
+--				PlayerStatus[player.Name] = false
+--			end
+--			player.CharacterAdded:Connect(function(character)
+--				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
+--					PlayerStatus[player.Name] = true
+--				else
+--					task.wait(2.5) -- wait for recheck
+--					if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
+--						PlayerStatus[player.Name] = true
+--					else
+--						PlayerStatus[player.Name] = false
+--					end
+--				end
+--			end)
+--			player.CharacterRemoving:Connect(function(character)
+--				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") and character:FindFirstChild("Humanoid").Health > 0 then
+--					PlayerStatus[player.Name] = true
+--				else
+--					PlayerStatus[player.Name] = false
+--				end
+--			end)
+--			if player and player.Character and player.Character:IsDescendantOf(game:GetService("Workspace")) and player.Character:FindFirstChild("Humanoid") then
+--				PlayerStatus[player.Name] = true
+--			end
+--		end
+--	end)
+--	Players.PlayerRemoving:Connect(function(player)
+--		if player and PlayerStatus[player.Name] ~= nil then
+--			PlayerStatus[player.Name] = nil
+--		end
+--	end)
+--	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta).", 1)
+--end
 
 --// Internal Functions
 function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
@@ -144,8 +185,25 @@ function IsExist(remoteName: string): boolean
 	return false
 end
 
-function _createId(): number
-	return math.random(math.random(21, 97), math.random(1033, math.random(13301, 255067)))
+function _createId(length: number | nil): string -- faster than UUID
+	if length ~= nil and tonumber(length) == nil then
+		return table.concat({math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), math.random(1,99)})
+	end
+	if length == nil or length < 5 or length > 16 then
+		return table.concat({math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), math.random(1,99)})
+	else
+		local _rand = {}
+		for i=1,length do
+			if math.random(1, 4) == 4 then
+				table.insert(_rand, math.random(11,999))
+			elseif math.random(1, 2) == 2 then
+				table.insert(_rand, math.random(1,99))
+			else
+				table.insert(_rand, string.char(math.random(97, 122)))
+			end
+		end
+		return table.concat(_rand)
+	end
 end
 
 -- Identifier
@@ -209,6 +267,10 @@ end
 
 function FastNet2.CreateUUID(): string
 	return Driver.CreateUUID()
+end
+
+function FastNet2.randStr(length: number | nil): string
+	return _createId(length)
 end
 
 function FastNet2.toBestFormNum(num: number): number | string
@@ -538,15 +600,30 @@ if IsServer then
 								local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
 								table.insert(to_returns_invoke, {data[1], {_call}})
 							elseif typeof(data[1]) == "table" then
-								if __callbacks[identifier] ~= nil then
-									if _enableEncoding then
-										if typeof(data) == "table" then
-											for indexs, to_encode in data do
-												data[indexs] = Driver.dec(useb64 or false, to_encode)
+								if plr and waitPlr and PlayerStatus[plr.Name] == true then
+									if __callbacks[identifier] ~= nil then
+										if _enableEncoding then
+											if typeof(data) == "table" then
+												for indexs, to_encode in data do
+													data[indexs] = Driver.dec(useb64 or false, to_encode)
+												end
 											end
 										end
+										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									end
-									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								elseif plr and waitPlr then
+									table.insert(_reDo[plr.Name], data)
+								elseif not waitPlr then
+									if __callbacks[identifier] ~= nil then
+										if _enableEncoding then
+											if typeof(data) == "table" then
+												for indexs, to_encode in data do
+													data[indexs] = Driver.dec(useb64 or false, to_encode)
+												end
+											end
+										end
+										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+									end
 								end
 								for _index, datas in table.unpack(v) do
 									if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
@@ -585,14 +662,29 @@ if IsServer then
 									end
 								end
 							else
-								if _enableEncoding then
-									if typeof(data) == "table" then
-										for indexs, to_encode in data do
-											data[indexs] = Driver.dec(useb64 or false, to_encode)
+								if __callbacks[identifier] ~= nil then
+									if plr and waitPlr and PlayerStatus[plr.Name] == true then
+										if _enableEncoding then
+											if typeof(data) == "table" then
+												for indexs, to_encode in data do
+													data[indexs] = Driver.dec(useb64 or false, to_encode)
+												end
+											end
 										end
+										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+									elseif plr and waitPlr then
+										table.insert(_reDo[plr.Name], data)
+									elseif not waitPlr then
+										if _enableEncoding then
+											if typeof(data) == "table" then
+												for indexs, to_encode in data do
+													data[indexs] = Driver.dec(useb64 or false, to_encode)
+												end
+											end
+										end
+										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									end
 								end
-								Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 							end
 							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
 								__callbacks[identifier] = nil
@@ -735,49 +827,90 @@ RunService.PostSimulation:Connect(function()
 		debug.profilebegin("FastNet2.Internal")
 		task.spawn(function()
 			debug.profilebegin("redo")
-			for identifier: string, _data in _reDo do
-				if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
-					_data = table.unpack(_data)
-					if
-						_findIdentifier(identifier)
-						and IsExist(identifier)
-						and __callbacks[identifier] ~= nil
-						and __callbacks[identifier]["func"] ~= nil
-					then
-						local to_returns_invoke: any = {}
-						local index_invokes: number = 0
-						for index, data in _data do
-							if __callbacks[identifier] ~= nil then
-								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
-									local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
-									table.insert(to_returns_invoke, {data[1], {_call}})
-								else
-									if __callbacks[identifier] ~= nil then
-										Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+			--if IsServer then
+			--	for player: string, data in _reDo do
+			--		if #data == 0 then
+			--			continue
+			--		end
+			--		for identifier: string, datas in data do
+			--			for index, _data in datas do
+			--				if
+			--					_findIdentifier(identifier)
+			--					and IsExist(identifier)
+			--					and __callbacks[identifier] ~= nil
+			--					and __callbacks[identifier]["func"] ~= nil
+			--				then
+			--					if player and waitPlr and PlayerStatus[player] == true then
+			--						if _enableEncoding then
+			--							if typeof(_data) == "table" then
+			--								for indexs, to_encode in _data do
+			--									_data[indexs] = Driver.dec(useb64 or false, to_encode)
+			--								end
+			--							end
+			--						end
+			--						Threads(__callbacks[identifier]["func"], player, table.unpack(_data or {}))
+			--						datas[index] = nil
+			--					elseif not waitPlr then
+			--						if _enableEncoding then
+			--							if typeof(_data) == "table" then
+			--								for indexs, to_encode in _data do
+			--									_data[indexs] = Driver.dec(useb64 or false, to_encode)
+			--								end
+			--							end
+			--						end
+			--						Threads(__callbacks[identifier]["func"], player, table.unpack(_data or {}))
+			--						datas[index] = nil
+			--					end
+			--				end
+			--			end
+			--		end
+			--	end
+			--elseif IsClient then
+			if IsClient then
+				for identifier: string, _data in _reDo do
+					if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
+						_data = table.unpack(_data)
+						if
+							_findIdentifier(identifier)
+							and IsExist(identifier)
+							and __callbacks[identifier] ~= nil
+							and __callbacks[identifier]["func"] ~= nil
+						then
+							local to_returns_invoke: any = {}
+							local index_invokes: number = 0
+							for index, data in _data do
+								if __callbacks[identifier] ~= nil then
+									if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+										local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
+										table.insert(to_returns_invoke, {data[1], {_call}})
 									else
-										for index, datas in table.unpack(_data) do
-											if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-												Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+										if __callbacks[identifier] ~= nil then
+											Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+										else
+											for index, datas in table.unpack(_data) do
+												if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
+													Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+												end
 											end
 										end
 									end
+									if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+										__callbacks[identifier] = nil
+									end
+									table.remove(_data, index)
 								end
-								if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
-									__callbacks[identifier] = nil
-								end
-								table.remove(_data, index)
 							end
+							task.spawn(function()
+								if #to_returns_invoke > 0 then
+									table.insert(_toSend[identifier], to_returns_invoke)
+								end
+								for i,_call in _signals[identifier] do
+									if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+										_call()
+									end
+								end
+							end)
 						end
-						task.spawn(function()
-							if #to_returns_invoke > 0 then
-								table.insert(_toSend[identifier], to_returns_invoke)
-							end
-							for i,_call in _signals[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-						end)
 					end
 				end
 			end

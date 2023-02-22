@@ -51,15 +51,10 @@ function encodeTable(b64: boolean, data): any
 				data[i] = base64.enc(datas)
 			else
 				local binary = ""
-				for i=1,#datas do
+				for i = 1, #datas do
 					local byte = string.byte(datas, i)
 					for j = 7, 0, -1 do
-						if byte >= 2 ^ j then
-							binary ..= "1"
-							byte -= 2 ^ j
-						else
-							binary ..= "0"
-						end
+						binary ..= bit32.band(bit32.rshift(byte, j), 1)
 					end
 				end
 				data[i] = binary
@@ -98,19 +93,12 @@ function decodeTable(b64: boolean, data): any
 					data[i] = y
 				end
 			else
-				local str = ""
-				local padding = 8 - (#datas % 8) -- calculate the number of bits to pad
-				datas ..= string.rep("0", padding) -- pad with zeros
-				for i = 1, #datas, 8 do
-					local byteBinary = datas:sub(i, i+7)
-					local byteDecimal = 0
-					for j = 1, 8 do
-						byteDecimal += tonumber(byteBinary:sub(j, j)) * 2^(8-j)
-					end
-					str ..= string.char(byteDecimal)
-				end
-				if padding > 0 then
-					str = str:sub(1, -2) -- remove the padded null byte
+				local index = 1
+				local str: any = ""
+				while index <= #datas do
+					local byteBinary = datas:sub(index, index + 7)
+					str ..= string.char(tonumber(byteBinary, 2))
+					index += 8
 				end
 				if tonumber(str) ~= nil then
 					data[i] = tonumber(str)
@@ -149,15 +137,10 @@ function Driver.enc(b64: boolean, data: any): any
 				return base64.enc(data) or data
 			end
 			local binary = ""
-			for i=1,#data do
+			for i = 1, #data do
 				local byte = string.byte(data, i)
 				for j = 7, 0, -1 do
-					if byte >= 2 ^ j then
-						binary ..= "1"
-						byte -= 2 ^ j
-					else
-						binary ..= "0"
-					end
+					binary ..= bit32.band(bit32.rshift(byte, j), 1)
 				end
 			end
 			return binary
@@ -173,15 +156,10 @@ function Driver.enc(b64: boolean, data: any): any
 					data[i] = base64.enc(datas)
 				else
 					local binary = ""
-					for i=1,#datas do
-						local byte = string.byte(datas, i)
+					for i = 1, #data do
+						local byte = string.byte(data, i)
 						for j = 7, 0, -1 do
-							if byte >= 2 ^ j then
-								binary ..= "1"
-								byte -= 2 ^ j
-							else
-								binary ..= "0"
-							end
+							binary ..= bit32.band(bit32.rshift(byte, j), 1)
 						end
 					end
 					data[i] = binary
@@ -220,21 +198,18 @@ function Driver.dec(b64, data: any): any
 			end
 			return y
 		end
-		local str = ""
-		local padding = 8 - (#data % 8) -- calculate the number of bits to pad
-		data ..= string.rep("0", padding) -- pad with zeros
-		for i = 1, #data, 8 do
-			local byteBinary = data:sub(i, i+7)
-			local byteDecimal = 0
-			for j = 1, 8 do
-				byteDecimal += tonumber(byteBinary:sub(j, j)) * 2^(8-j)
-			end
-			str ..= string.char(byteDecimal)
+		local index = 1
+		local str: any = ""
+		while index <= #data do
+			local byteBinary = data:sub(index, index + 7)
+			str ..= string.char(tonumber(byteBinary, 2))
+			index += 8
 		end
-		if padding > 0 then
-			str = str:sub(1, -2) -- remove the padded null byte
+		if tonumber(str) ~= nil then
+			return tonumber(str)
+		else
+			return str
 		end
-		return str
 	elseif typeof(data) == "table" then
 		for i, datas in data do
 			if typeof(datas) == "string" and datas:len() > 0 then
@@ -249,19 +224,12 @@ function Driver.dec(b64, data: any): any
 						data[i] = y
 					end
 				else
-					local str = ""
-					local padding = 8 - (#datas % 8) -- calculate the number of bits to pad
-					datas ..= string.rep("0", padding) -- pad with zeros
-					for i = 1, #datas, 8 do
-						local byteBinary = datas:sub(i, i+7)
-						local byteDecimal = 0
-						for j = 1, 8 do
-							byteDecimal += tonumber(byteBinary:sub(j, j)) * 2^(8-j)
-						end
-						str ..= string.char(byteDecimal)
-					end
-					if padding > 0 then
-						str = str:sub(1, -2) -- remove the padded null byte
+					local index = 1
+					local str: any = ""
+					while index <= #datas do
+						local byteBinary = datas:sub(index, index + 7)
+						str ..= string.char(tonumber(byteBinary, 2))
+						index += 8
 					end
 					if tonumber(str) ~= nil then
 						data[i] = tonumber(str)
