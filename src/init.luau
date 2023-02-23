@@ -1,16 +1,17 @@
 --!strict
 
 -- FastNet2
--- v0.0.8e-pre-alpha
+-- v0.0.8-pre-alpha
 assert(script:IsDescendantOf(game:GetService("ReplicatedStorage")), "Please place the FastNet2 module into ReplicatedStorage.")
 
 local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = "0.0.8e"
-FastNet2.build = 7.9
+FastNet2.version = "0.0.8"
+FastNet2.build = 8
 
 type Tany = { [any]: any }
+type tHold = { [string]: Tany}
 
 --// Settings
 local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
@@ -57,6 +58,7 @@ local __nets: Tany = {}
 local _toSend: Tany = {}
 local _signals: any = {}
 local _reDo: any = {}
+local _onHold: Tany = {}
 
 local initialized = false
 
@@ -108,43 +110,43 @@ if IsClient then
 end
 
 local PlayerStatus: Tany = {}
---if IsServer and waitPlr then
---	Players.PlayerAdded:Connect(function(player)
---		if player then
---			if not PlayerStatus[player.Name] then
---				PlayerStatus[player.Name] = false
---			end
---			player.CharacterAdded:Connect(function(character)
---				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
---					PlayerStatus[player.Name] = true
---				else
---					task.wait(2.5) -- wait for recheck
---					if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
---						PlayerStatus[player.Name] = true
---					else
---						PlayerStatus[player.Name] = false
---					end
---				end
---			end)
---			player.CharacterRemoving:Connect(function(character)
---				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") and character:FindFirstChild("Humanoid").Health > 0 then
---					PlayerStatus[player.Name] = true
---				else
---					PlayerStatus[player.Name] = false
---				end
---			end)
---			if player and player.Character and player.Character:IsDescendantOf(game:GetService("Workspace")) and player.Character:FindFirstChild("Humanoid") then
---				PlayerStatus[player.Name] = true
---			end
---		end
---	end)
---	Players.PlayerRemoving:Connect(function(player)
---		if player and PlayerStatus[player.Name] ~= nil then
---			PlayerStatus[player.Name] = nil
---		end
---	end)
---	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta).", 1)
---end
+if IsServer and waitPlr then
+	Players.PlayerAdded:Connect(function(player)
+		if player then
+			if not PlayerStatus[player.Name] then
+				PlayerStatus[player.Name] = false
+			end
+			player.CharacterAdded:Connect(function(character)
+				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
+					PlayerStatus[player.Name] = true
+				else
+					task.wait(2.5) -- wait for recheck
+					if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
+						PlayerStatus[player.Name] = true
+					else
+						PlayerStatus[player.Name] = false
+					end
+				end
+			end)
+			player.CharacterRemoving:Connect(function(character)
+				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") and character:FindFirstChild("Humanoid").Health > 0 then
+					PlayerStatus[player.Name] = true
+				else
+					PlayerStatus[player.Name] = false
+				end
+			end)
+			if player and player.Character and player.Character:IsDescendantOf(game:GetService("Workspace")) and player.Character:FindFirstChild("Humanoid") then
+				PlayerStatus[player.Name] = true
+			end
+		end
+	end)
+	Players.PlayerRemoving:Connect(function(player)
+		if player and PlayerStatus[player.Name] ~= nil then
+			PlayerStatus[player.Name] = nil
+		end
+	end)
+	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta).", 1)
+end
 
 --// Internal Functions
 function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
@@ -600,30 +602,38 @@ if IsServer then
 								local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
 								table.insert(to_returns_invoke, {data[1], {_call}})
 							elseif typeof(data[1]) == "table" then
-								if plr and waitPlr and PlayerStatus[plr.Name] == true then
-									if __callbacks[identifier] ~= nil then
-										if _enableEncoding then
-											if typeof(data) == "table" then
-												for indexs, to_encode in data do
-													data[indexs] = Driver.dec(useb64 or false, to_encode)
-												end
-											end
+								-- if plr and waitPlr and PlayerStatus[plr.Name] == true then
+								-- 	if __callbacks[identifier] ~= nil then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	end
+								-- elseif plr and waitPlr then
+								-- 	table.insert(_onHold[plr.Name], data)
+								-- elseif not waitPlr then
+								-- 	if __callbacks[identifier] ~= nil then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	end
+								-- end
+								if __callbacks[identifier] ~= nil and _enableEncoding then
+									if typeof(data) == "table" then
+										for indexs, to_encode in data do
+											data[indexs] = Driver.dec(useb64 or false, to_encode)
 										end
-										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									end
-								elseif plr and waitPlr then
-									table.insert(_reDo[plr.Name], data)
-								elseif not waitPlr then
-									if __callbacks[identifier] ~= nil then
-										if _enableEncoding then
-											if typeof(data) == "table" then
-												for indexs, to_encode in data do
-													data[indexs] = Driver.dec(useb64 or false, to_encode)
-												end
-											end
-										end
-										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									end
+									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 								end
 								for _index, datas in table.unpack(v) do
 									if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
@@ -662,28 +672,36 @@ if IsServer then
 									end
 								end
 							else
-								if __callbacks[identifier] ~= nil then
-									if plr and waitPlr and PlayerStatus[plr.Name] == true then
-										if _enableEncoding then
-											if typeof(data) == "table" then
-												for indexs, to_encode in data do
-													data[indexs] = Driver.dec(useb64 or false, to_encode)
-												end
-											end
+								-- if __callbacks[identifier] ~= nil then
+								-- 	if plr and waitPlr and PlayerStatus[plr.Name] == true then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	elseif plr and waitPlr then
+								-- 		table.insert(_onHold[plr.Name], data)
+								-- 	elseif not waitPlr then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	end
+								-- end
+								if __callbacks[identifier] ~= nil and _enableEncoding then
+									if typeof(data) == "table" then
+										for indexs, to_encode in data do
+											data[indexs] = Driver.dec(useb64 or false, to_encode)
 										end
-										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									elseif plr and waitPlr then
-										table.insert(_reDo[plr.Name], data)
-									elseif not waitPlr then
-										if _enableEncoding then
-											if typeof(data) == "table" then
-												for indexs, to_encode in data do
-													data[indexs] = Driver.dec(useb64 or false, to_encode)
-												end
-											end
-										end
-										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									end
+									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 								end
 							end
 							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
@@ -790,7 +808,7 @@ elseif IsClient then
 					and IsExist(identifier)
 				then
 					for index, datas in table.unpack(_data) do
-						if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+						if typeof(index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
 							if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
 								if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
 									Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
@@ -827,45 +845,6 @@ RunService.PostSimulation:Connect(function()
 		debug.profilebegin("FastNet2.Internal")
 		task.spawn(function()
 			debug.profilebegin("redo")
-			--if IsServer then
-			--	for player: string, data in _reDo do
-			--		if #data == 0 then
-			--			continue
-			--		end
-			--		for identifier: string, datas in data do
-			--			for index, _data in datas do
-			--				if
-			--					_findIdentifier(identifier)
-			--					and IsExist(identifier)
-			--					and __callbacks[identifier] ~= nil
-			--					and __callbacks[identifier]["func"] ~= nil
-			--				then
-			--					if player and waitPlr and PlayerStatus[player] == true then
-			--						if _enableEncoding then
-			--							if typeof(_data) == "table" then
-			--								for indexs, to_encode in _data do
-			--									_data[indexs] = Driver.dec(useb64 or false, to_encode)
-			--								end
-			--							end
-			--						end
-			--						Threads(__callbacks[identifier]["func"], player, table.unpack(_data or {}))
-			--						datas[index] = nil
-			--					elseif not waitPlr then
-			--						if _enableEncoding then
-			--							if typeof(_data) == "table" then
-			--								for indexs, to_encode in _data do
-			--									_data[indexs] = Driver.dec(useb64 or false, to_encode)
-			--								end
-			--							end
-			--						end
-			--						Threads(__callbacks[identifier]["func"], player, table.unpack(_data or {}))
-			--						datas[index] = nil
-			--					end
-			--				end
-			--			end
-			--		end
-			--	end
-			--elseif IsClient then
 			if IsClient then
 				for identifier: string, _data in _reDo do
 					if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
@@ -915,6 +894,35 @@ RunService.PostSimulation:Connect(function()
 				end
 			end
 			debug.profileend()
+		end)
+		task.spawn(function()
+			if IsServer and waitPlr then
+				debug.profilebegin("hold")
+				for player: string, data in _onHold do
+					if #data == 0 then
+						continue
+					end
+					for identifier: string, datas in data do
+						if #datas > 0 then
+							for index: number, _data in datas do
+								if
+									_findIdentifier(identifier)
+									and IsExist(identifier)
+								then
+									if player and waitPlr and PlayerStatus[player] == true then
+										_NetEvent:FireClient(player, {[identifier] = _data})
+										table.remove(datas, index)
+									elseif not waitPlr then
+										_NetEvent:FireClient(player, {[identifier] = _data})
+										table.remove(datas, index)
+									end
+								end
+							end
+						end
+					end
+				end
+				debug.profileend()
+			end
 		end)
 		-- Encoder
 		if IsClient and _enableEncoding then
@@ -1019,9 +1027,21 @@ RunService.PostSimulation:Connect(function()
 			if to_send_indexs > 0 then
 				for identifier: string, pkg in to_send_to_client do
 					for player, _data in pkg do
-						local _convert = {}
-						_convert[identifier] = _data
-						_NetEvent:FireClient(player, _convert)
+						-- local _convert = {}
+						-- _convert[identifier] = _data
+						if player and waitPlr and PlayerStatus[player.Name] == true then
+							_NetEvent:FireClient(player, {[identifier] = _data})
+						elseif not waitPlr then
+							_NetEvent:FireClient(player, {[identifier] = _data})
+						else
+							if not _onHold[player.Name] then
+								_onHold[player.Name] = {}
+							end
+							if _onHold[player.Name] and not _onHold[player.Name][identifier] then
+								_onHold[player.Name][identifier] = {}
+							end
+							table.insert(_onHold[player.Name][identifier], _data)
+						end
 					end
 				end
 				table.clear(to_send_to_client)
