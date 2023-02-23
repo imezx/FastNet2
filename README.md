@@ -15,6 +15,13 @@ https://wally.run/package/imezx/fastnet2
 -> Receive/Get remote, waitFor is yielded
 # FastNet2:Create(remoteName: string, typeRemote: string): any
 -> Create new remote, typeRemote: "Event"/"Events"
+# FastNet2.CreateUUID(): string
+-> Generate Unique ID as string
+# FastNet2.randStr(length: number | undefined): string
+-> alternative for using createUUID but faster version but its lite version of unique
+# FastNet2.up(): number
+# FastNet2.down(): number
+# FastNet2.Wait(): number
 
 # * FastNet2 - Functions
 
@@ -30,12 +37,8 @@ https://wally.run/package/imezx/fastnet2
 - Server
 # FastNet2Remote:Fire(player: Player, ...: any)
 Note: Server currently incompleted
+# FastNet2Remote:Wait(): number
 
 - Client
 # FastNet2Remote:Fire(...: any)
-=======
-# FastNet2Remote:Fires(...: any)
-Note: Server currently incompleted
-- Client
-# FastNet2Remote:Fire(...: any)
->>>>>>> (v0.0.3)
+# FastNet2Remote:Wait(): number
