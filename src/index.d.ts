@@ -1,6 +1,7 @@
 interface Debug {
     set_debug(x : boolean): void
     __direct_debug(c: any, m: string, l: number, l2: number | undefined): boolean
+    get_debugs_inrange(range: number): any
 }
 
 interface FastNet2 {
@@ -17,6 +18,8 @@ interface FastNet2 {
     Wait(): number
     getProvider(toBool: boolean | undefined): any
     _setdebug(On: boolean)
+    CreateUUID(): string
+    randStr(length: number | undefined): string
 }
 
 export default FastNet2
