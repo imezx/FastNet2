@@ -580,6 +580,7 @@ function FastNet2:create(remoteName: string, typeRemote: string): Tany
 	return self:Create(remoteName, typeRemote)
 end
 
+debug.setmemorycategory("FastNet2")
 if IsServer then
 	_NetEvent.OnServerEvent:Connect(function(plr, pkg)
 		debug.profilebegin("FastNet2.server")
@@ -1057,6 +1058,6 @@ RunService.PostSimulation:Connect(function()
 end)
 
 reConfigure(__currentMode or 2)
-warn(string.format("FastNet2 initialized [ver_%s | %s | %sms]", FastNet2.version, __getProvider(), (tick() - __load_s)*1000))
+warn(string.format("FastNet2 initialized [ver_%s (%s) | %s | %sms]", FastNet2.version, tostring(FastNet2.build), __getProvider(), (tick() - __load_s)*1000))
 
 return table.freeze(FastNet2)
