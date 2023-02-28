@@ -561,7 +561,7 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 			typeRemote = typeRemote:lower()
 			if typeRemote == "event" or typeRemote == "events" or typeRemote == "remoteevent" or typeRemote == "remoteevents" or typeRemote == "re" then
 				__nets[remoteName] = {
-					_type = "RemoteEvent",
+					_type = "re",
 					name = remoteName,
 				}
 			elseif
