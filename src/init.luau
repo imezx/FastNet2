@@ -263,10 +263,6 @@ function FastNet2.getdebugcache(maxrange: number): Tany
 	return Debug.get_debugs_inrange(maxrange or 100)
 end
 
-function FastNet2.getProvider(toBool: boolean?): any
-	return __getProvider(toBool or false)
-end
-
 function FastNet2.CreateUUID(): string
 	return Driver.CreateUUID()
 end
@@ -910,13 +906,14 @@ RunService.PostSimulation:Connect(function()
 									_findIdentifier(identifier)
 									and IsExist(identifier)
 								then
-									if player and waitPlr and PlayerStatus[player] == true then
-										_NetEvent:FireClient(player, {[identifier] = _data})
-										table.remove(datas, index)
-									elseif not waitPlr then
-										_NetEvent:FireClient(player, {[identifier] = _data})
-										table.remove(datas, index)
+									if player and Players[player] then
+										if waitPlr and PlayerStatus[player] == true then
+											_NetEvent:FireClient(Players[player], {[identifier] = _data})
+										elseif not waitPlr then
+											_NetEvent:FireClient(Players[player], {[identifier] = _data})
+										end
 									end
+									table.remove(datas, index)
 								end
 							end
 						end

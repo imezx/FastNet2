@@ -16,7 +16,6 @@ interface FastNet2 {
     up(): number
     down(): number
     Wait(): number
-    getProvider(toBool: boolean | undefined): any
     _setdebug(On: boolean)
     CreateUUID(): string
     randStr(length: number | undefined): string
