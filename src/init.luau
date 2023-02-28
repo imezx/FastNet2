@@ -1,6 +1,6 @@
 --!strict
 
--- FastNet2
+-- FastNet2 (copyright @Eternity_Devs under MIT License)
 -- v0.0.8-pre-alpha
 assert(script:IsDescendantOf(game:GetService("ReplicatedStorage")), "Please place the FastNet2 module into ReplicatedStorage.")
 
@@ -53,12 +53,13 @@ else
 	_maxRate_perEvent = 500
 end
 
+-- FastNet2 Warehouse & Middleware
 local __callbacks: Tany = {}
 local __nets: Tany = {}
 local _toSend: Tany = {}
 local _signals: any = {}
 local _reDo: any = {}
-local _onHold: Tany = {}
+local _onHold: tHold = {}
 
 local initialized = false
 
@@ -109,7 +110,7 @@ if IsClient then
 	Debug.set_debug(false)
 end
 
-local PlayerStatus: Tany = {}
+local PlayerStatus: Tany = {} -- players status for holding connection feature method (experimental)
 if IsServer and waitPlr then
 	Players.PlayerAdded:Connect(function(player)
 		if player then
@@ -145,7 +146,7 @@ if IsServer and waitPlr then
 			PlayerStatus[player.Name] = nil
 		end
 	end)
-	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta).", 1)
+	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta/experimental).", 1)
 end
 
 --// Internal Functions
@@ -194,7 +195,7 @@ function _createId(length: number | nil): string -- faster than UUID
 	if length == nil or length < 5 or length > 16 then
 		return table.concat({math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), math.random(1,99)})
 	else
-		local _rand = {}
+		local _rand: Tany = {}
 		for i=1,length do
 			if math.random(1, 4) == 4 then
 				table.insert(_rand, math.random(11,999))
@@ -372,7 +373,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	function __new:once(waitTill: boolean | any, callbacks: any)
 		self:Once(waitTill, callbacks)
 	end
-	if __nets and __nets[remoteName] and __nets[remoteName]._type == "RemoteEvent" then
+	if __nets and __nets[remoteName] and __nets[remoteName]._type == "re" then
 		function __new:Disconnect(message: string?)
 			if __new and __callbacks[remoteName] ~= nil and __disconnected == false then
 				if __callbacks[remoteName]["_once"] ~= nil then
@@ -436,7 +437,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		function __new:disconnected(): boolean
 			return self:Disconnected()
 		end
-	else
+	elseif __nets and __nets[remoteName] and __nets[remoteName]._type == "rf" then
 		if IsServer then
 			function __new:Pull(player: Player, timeout: number, ...: any): any?
 				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2)
@@ -523,6 +524,16 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				return self:Pull(player, timeout, ...)
 			end
 		end
+	else
+		table.clear(__new)
+		task.spawn(function()
+			if __nets and __nets[remoteName] then
+				Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: CRITICAL -> %s corrupted?", remoteName), 3)
+			else
+				Debug.__direct_debug(1 ~= 1, "[FastNet2]: CRITICAL -> Unknown error", 2)
+			end
+		end)
+		return table.freeze({})
 	end
 	function __new:Destroy()
 		if __nets[remoteName] ~= nil then
@@ -548,7 +559,7 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 	if not IsExist(remoteName) then
 		if typeof(typeRemote) == "string" then
 			typeRemote = typeRemote:lower()
-			if typeRemote == "event" or typeRemote == "events" or typeRemote == "remoteevent" or typeRemote == "remoteevents" then
+			if typeRemote == "event" or typeRemote == "events" or typeRemote == "remoteevent" or typeRemote == "remoteevents" or typeRemote == "re" then
 				__nets[remoteName] = {
 					_type = "RemoteEvent",
 					name = remoteName,
@@ -560,9 +571,10 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 				or typeRemote == "functions"
 				or typeRemote == "remotefunction"
 				or typeRemote == "remotefunctions"
+				or typeRemote == "rf"
 			then
 				__nets[remoteName] = {
-					_type = "RemoteFunction",
+					_type = "rf",
 					name = remoteName
 				}
 				-- Debug.__direct_debug(1 ~= 1, "[FastNet2]: RemoteFunction features is currently not available.", 2)
@@ -591,7 +603,7 @@ if IsServer then
 					and __callbacks[identifier] ~= nil
 					and __callbacks[identifier]["func"] ~= nil
 				then
-					local to_returns_invoke: any = {}
+					local to_returns_invoke: any = {} -- middleware
 					local index_invokes: number = 0
 					for index, data in v do
 						if __callbacks[identifier] ~= nil then
@@ -706,11 +718,11 @@ if IsServer then
 							end
 						end
 					end
+					if #to_returns_invoke > 0 then
+						table.insert(_toSend[identifier], {plr, to_returns_invoke})
+						table.clear(to_returns_invoke) -- prevent memory leaks?
+					end
 					task.spawn(function()
-						if #to_returns_invoke > 0 then
-							table.insert(_toSend[identifier], {plr, to_returns_invoke})
-							table.clear(to_returns_invoke) -- prevent memory leaks?
-						end
 						debug.profilebegin("signal")
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
@@ -754,7 +766,7 @@ elseif IsClient then
 					and __callbacks[identifier] ~= nil
 					and __callbacks[identifier]["func"] ~= nil
 				then
-					local to_returns_invoke: any = {}
+					local to_returns_invoke: any = {} -- middleware
 					local index_invokes: number = 0
 					for index, data in _data do
 						if __callbacks[identifier] ~= nil then
@@ -787,11 +799,11 @@ elseif IsClient then
 							end
 						end
 					end
+					if #to_returns_invoke > 0 then
+						table.insert(_toSend[identifier], to_returns_invoke)
+						table.clear(to_returns_invoke) -- prevent memory leaks?
+					end
 					task.spawn(function()
-						if #to_returns_invoke > 0 then
-							table.insert(_toSend[identifier], to_returns_invoke)
-							table.clear(to_returns_invoke) -- prevent memory leaks?
-						end
 						debug.profilebegin("signal")
 						for i,_call in _signals[identifier] do
 							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
@@ -943,7 +955,7 @@ RunService.PostSimulation:Connect(function()
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
-		}
+		} -- middleware
 		local __reach_s_max: boolean = false
 		local __reach_c_max: boolean = false
 		local __Sindex: number = 0
