@@ -188,21 +188,28 @@ function IsExist(remoteName: string): boolean
 	return false
 end
 
+function randNum(min: number, max:number, new: boolean | nil): number
+	if new then
+		return Random.new():NextInteger(min, max)
+	end
+	return randNum(min, max)
+end
+
 function _createId(length: number | nil): string -- faster than UUID
 	if length ~= nil and tonumber(length) == nil then
-		return table.concat({math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), math.random(1,99)})
+		return table.concat({randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,65535), string.char(randNum(97, 122)), randNum(1,65535)})
 	end
 	if length == nil or length < 5 or length > 16 then
-		return table.concat({math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), string.char(math.random(97, 122)), math.random(11,999), string.char(math.random(97, 122)), math.random(1,99)})
+		return table.concat({randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,65535), string.char(randNum(97, 122)), randNum(1,65535)})
 	else
 		local _rand: Tany = {}
 		for i=1,length do
-			if math.random(1, 4) == 4 then
-				table.insert(_rand, math.random(11,999))
-			elseif math.random(1, 2) == 2 then
-				table.insert(_rand, math.random(1,99))
+			if randNum(1, 4) == 4 then
+				table.insert(_rand, randNum(11,999))
+			elseif randNum(1, 2) == 2 then
+				table.insert(_rand, randNum(1,99))
 			else
-				table.insert(_rand, string.char(math.random(97, 122)))
+				table.insert(_rand, string.char(randNum(97, 122)))
 			end
 		end
 		return table.concat(_rand)
@@ -272,11 +279,15 @@ function FastNet2.randStr(length: number | nil): string
 	return _createId(length)
 end
 
+function FastNet2.randNum(min: number, max: number, NewInt: boolean | nil): number
+	return randNum(min, max, NewInt)
+end
+
 function FastNet2.toBestFormNum(num: number): number | string
 	return Driver.toBestFormNum(num)
 end
 
-function FastNet2:Wait(): number
+function FastNet2.Wait(): number
 	--[[
 	Somereason just use PostSimulator as Heartbeat because Heartbeat only fire after Render Signal fire here why if the server/client dropped frame
 	could be bad, PostSimulator is the new of Heartbeat, PostSimultion dont need to wait until Render Signal fired.
@@ -284,8 +295,8 @@ function FastNet2:Wait(): number
 	]]--
 	return RunService.PostSimulation:Wait() -- 60 frame / 0.0166s / 16.66ms
 end
-function FastNet2:wait(): number
-	return self:Wait()
+function FastNet2.wait(): number
+	return FastNet2.Wait()
 end
 
 function FastNet2.up(): number
@@ -329,7 +340,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	local __new: Tany = {}
 	local __disconnected = false
 	-- functions
-	function __new:Wait(): number -- EXPERIMENTAL
+	function __new:Wait() -- EXPERIMENTAL
 		local _now,this = tick(), _createId()
 		local val,_on = 0,true
 		_signals[remoteName]["_signal"..this] = function()
@@ -340,10 +351,10 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		_signals[remoteName]["_signal"..this] = nil
 		return (val-_now)
 	end
-	function __new:wait(): number
+	function __new:wait()
 		return self:Wait()
 	end
-	function __new:Listen(waitTill: boolean | any, callback: any): Tany
+	function __new:Listen(waitTill: boolean | any, callback: any)
 		if typeof(waitTill) == "boolean" and waitTill == true then
 			if __disconnected then
 				__disconnected = false
@@ -360,7 +371,6 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			}
 		end
 		__callbacks[remoteName]["_type"] = __nets[remoteName]._type
-		return table.freeze(self)
 	end
 	function __new:listen(waitTill: boolean | any, callbacks: any)
 		return self:Listen(waitTill, callbacks)
@@ -458,15 +468,13 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				else
 					timeout = 5
 				end
-				local finish, _t, toreturn = false, tick(), nil
+				local result, finish, _t, toreturn = false, false, tick(), nil
 				local _makeId = _createId()
 				local tosend: any = {...}
-				-- create invoke signal first
 				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
-					finish = true
 					toreturn = (...)
+					finish = true
 				end
-				-- send data into middleware identifier
 				local _yield = task.spawn(function()
 					table.insert(_currentIdentifier, {player, {_makeId, tosend}})
 				end)
@@ -478,7 +486,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 					end
 					task.wait()
 				end
-				_signals[remoteName]["_invokeSignal".._makeId] = nil -- delete signal
+				_signals[remoteName]["_invokeSignal".._makeId] = nil
 				return toreturn
 			end
 			function __new:pull(player: Player, timeout: number, ...: any): any?
@@ -502,15 +510,13 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				else
 					timeout = 5
 				end
-				local finish, _t, toreturn = false, tick(), nil
+				local result, finish, _t, toreturn = false, false, tick(), nil
 				local _makeId = _createId()
 				local tosend: any = {...}
-				-- create invoke signal first
 				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
-					finish = true
 					toreturn = (...)
+					finish = true
 				end
-				-- send data into middleware identifier
 				local _yield = task.spawn(function()
 					table.insert(_currentIdentifier, {_makeId, tosend})
 				end)
@@ -522,7 +528,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 					end
 					task.wait()
 				end
-				_signals[remoteName]["_invokeSignal".._makeId] = nil -- delete signal
+				_signals[remoteName]["_invokeSignal".._makeId] = nil
 				return toreturn
 			end
 			function __new:pull(player: Player, timeout: number, ...: any): any?
@@ -856,7 +862,7 @@ end
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
 	if (os.clock() - __t) >= smooth_mode or (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
-		debug.profilebegin("FastNet2.Internal")
+		debug.profilebegin("FastNet2.Internal.process")
 		task.spawn(function()
 			debug.profilebegin("redo")
 			if IsClient then
@@ -1072,6 +1078,6 @@ RunService.PostSimulation:Connect(function()
 end)
 
 reConfigure(__currentMode or 2)
-Debug.__direct_debug(1 ~= 1, string.format("FastNet2 initialized [ver_%s (%s) | %s | %sms]", FastNet2.version, tostring(FastNet2.build), __getProvider(), (tick() - __load_s)*1000), 2)
+warn(string.format("FastNet2 initialized [ver_%s (%s) | %s | %sms]", FastNet2.version, tostring(FastNet2.build), __getProvider(), (tick() - __load_s)*1000))
 
 return table.freeze(FastNet2)
