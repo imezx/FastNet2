@@ -6,7 +6,6 @@ https://wally.run/package/imezx/fastnet2
 
 # * FastNet2 - APIs
 
-# FastNet2:Wait(): number
 # FastNet2:IsExist(remoteName: string): boolean
 -> Check if the remote is exists
 # FastNet2:toBestFormNumber(num: number): number | string
