@@ -340,7 +340,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	local __new: Tany = {}
 	local __disconnected = false
 	-- functions
-	function __new:Wait() -- EXPERIMENTAL
+	function __new:Wait(): number -- EXPERIMENTAL
 		local _now,this = tick(), _createId()
 		local val,_on = 0,true
 		_signals[remoteName]["_signal"..this] = function()
@@ -351,10 +351,10 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		_signals[remoteName]["_signal"..this] = nil
 		return (val-_now)
 	end
-	function __new:wait()
+	function __new:wait(): number
 		return self:Wait()
 	end
-	function __new:Listen(waitTill: boolean | any, callback: any)
+	function __new:Listen(waitTill: boolean | any, callback: any): Tany
 		if typeof(waitTill) == "boolean" and waitTill == true then
 			if __disconnected then
 				__disconnected = false
@@ -371,6 +371,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			}
 		end
 		__callbacks[remoteName]["_type"] = __nets[remoteName]._type
+		return table.freeze(self)
 	end
 	function __new:listen(waitTill: boolean | any, callbacks: any)
 		return self:Listen(waitTill, callbacks)
@@ -468,12 +469,12 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				else
 					timeout = 5
 				end
-				local result, finish, _t, toreturn = false, false, tick(), nil
+				local finish, _t, toreturn = false, tick(), nil
 				local _makeId = _createId()
 				local tosend: any = {...}
 				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
-					toreturn = (...)
 					finish = true
+					toreturn = (...)
 				end
 				local _yield = task.spawn(function()
 					table.insert(_currentIdentifier, {player, {_makeId, tosend}})
@@ -510,12 +511,12 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				else
 					timeout = 5
 				end
-				local result, finish, _t, toreturn = false, false, tick(), nil
+				local finish, _t, toreturn = false, tick(), nil
 				local _makeId = _createId()
 				local tosend: any = {...}
 				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
-					toreturn = (...)
 					finish = true
+					toreturn = (...)
 				end
 				local _yield = task.spawn(function()
 					table.insert(_currentIdentifier, {_makeId, tosend})
@@ -1078,6 +1079,6 @@ RunService.PostSimulation:Connect(function()
 end)
 
 reConfigure(__currentMode or 2)
-warn(string.format("FastNet2 initialized [ver_%s (%s) | %s | %sms]", FastNet2.version, tostring(FastNet2.build), __getProvider(), (tick() - __load_s)*1000))
+Debug.__direct_debug(1 ~= 1, string.format("FastNet2 initialized [ver_%s (%s) | %s | %sms]", FastNet2.version, tostring(FastNet2.build), __getProvider(), (tick() - __load_s)*1000), 2)
 
 return table.freeze(FastNet2)
