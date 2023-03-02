@@ -1,7 +1,7 @@
 --!strict
 
 -- FastNet2 (copyright @Eternity_Devs under MIT License)
--- v0.0.8-pre-alpha
+-- v0.0.8-pre-alpha (refresh)
 assert(script:IsDescendantOf(game:GetService("ReplicatedStorage")), "Please place the FastNet2 module into ReplicatedStorage.")
 
 local __load_s: any = tick()
@@ -92,7 +92,6 @@ end
 
 local Nets: any
 local _NetEvent: RemoteEvent
-local _NetInvoke: RemoteFunction
 if not script:FindFirstChild("Net") then
 	Nets = Instance.new("Folder", script)
 	Nets.Name = "Net"
@@ -318,15 +317,15 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		if waitFor < 5 then
 			waitFor = 5
 		end
-		local result, finish, _t = false, false, tick()
+		local finish, _t = false, tick()
 		local _yield = task.spawn(function()
 			repeat
-				result = IsExist(remoteName)
+				finish = IsExist(remoteName)
 				task.wait()
-			until result == true
+			until finish == true
 			finish = true
 		end)
-		while (finish == false) do
+		while (not finish) do
 			if (tick() - _t) >= waitFor then
 				finish = true
 				task.cancel(_yield)
