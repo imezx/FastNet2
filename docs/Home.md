@@ -5,20 +5,20 @@ Simply FastNet2 is way faster and use less bandwidth than built-in ROBLOX Networ
 
 # Why you should choose FastNet2 than others?
 
-- Easy to Use
-- Better Optimization & Performance
-- Stability & Efficience (reduced throttling)
-- One-remote usage (better performance than multiple remote usages)
-- DataToSend Stored in IdentifierData (semiliar with Table Manipulation)
-- Better Utilities
-- Better Thread Re-uses (with advanced and enhanced multi-threading and free brute threading)
-- Internal Middleware (implemented a system likely how middleware works but in-out middleware are combined → hybrid middleware)
-- Typecheck (supported roblox-ts)
-- Safety checks
-- Prioritized Specially Designed for a better lightweight, stable, efficience, performance & faster than native (roblox)
-- Enhanced Encoding & Decoding (Binary)
-- Memory-leaks prevention
-- Way more enhanced networking library
+- **Easy to Use**
+- **Better Optimization & Performance**
+- **Stability & Efficience** (reduced throttling)
+- **One-remote usage** (better performance than multiple remote usages)
+- **DataToSend Stored in IdentifierData** (semiliar with Table Manipulation)
+- **Better Utilities**
+- **Better Thread Re-uses** (with advanced and enhanced multi-threading and free brute threading)
+- **Internal Middleware** (implemented a system likely how middleware works but in-out middleware are combined → hybrid middleware)
+- **Typecheck** (supported roblox-ts)
+- **Safety checks**
+- **Prioritized Specially Designed for a better lightweight, stable, efficience, performance & faster than native (roblox)**
+- **Enhanced Encoding & Decoding (Binary)**
+- **Memory-leaks prevention**
+- **Way more enhanced networking library**
 
 # Why should use FastNet2 over FastNet & Roblox?
 
