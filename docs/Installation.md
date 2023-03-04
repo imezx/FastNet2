@@ -8,7 +8,7 @@
 [dependencies]
 FastNet2 = imezx/fastnet2@0.8.0
 ```
-3. Run ``wally install``
+3. Run ``wally install`` on command prompt
 
 > # With .RBXM or .LUA file
 
