@@ -2,6 +2,7 @@
 --!strict
 local Driver = {}
 local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
 local base64 = require(script:WaitForChild("b64"))
 
 function Driver.CreateUUID(): string
@@ -15,6 +16,53 @@ function Driver.toBestFormNum(num: number): number | string
 	else
 		return num
 	end
+end
+
+function Driver.Nearest(player: Player, radiusDist: any, customCharacter: boolean?): {[string]: number}
+	local InNearest: any = {}
+	radiusDist = tonumber(radiusDist)
+	assert(typeof(radiusDist) == "number", "Invalid argument radiusDist")
+	assert(radiusDist > 0 , "Minimum argument radiusDist is > 0")
+	if player and #Players:GetPlayers() > 0 then
+		for _, plr: Player in ipairs(Players:GetPlayers()) do
+			if plr and plr:IsA("Player") then
+				if player and player:IsA("Player") and player.Character and plr and plr.Character then
+					if not customCharacter then
+						if player.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("HumanoidRootPart") and player.Character:FindFirstChild("HumanoidRootPart") ~= plr.Character:FindFirstChild("HumanoidRootPart") then
+							local distance = (player.Character:WaitForChild("HumanoidRootPart").Position - plr.Character:WaitForChild("HumanoidRootPart").Position).Magnitude
+							if distance <= tonumber(radiusDist) then
+								InNearest[plr.Name] = distance
+							end
+						end
+					elseif customCharacter then
+						if player.Character.PrimaryPart ~= nil and player.Character.PrimaryPart:IsA("BasePart") and plr.Character.PrimaryPart ~= nil and plr.Character.PrimaryPart:IsA("BasePart") and player.Character.PrimaryPart ~= plr.Character.PrimaryPart then
+							local distance = (player.Character.PrimaryPart.Position - plr.Character.PrimaryPart.Position).Magnitude
+							if distance <= tonumber(radiusDist) then
+								InNearest[plr.Name] = distance
+							end
+						end
+					end
+				elseif plr and plr.Character and player and player:IsA("BasePart") then
+					if not customCharacter then
+						if plr.Character:FindFirstChild("HumanoidRootPart") and player ~= plr.Character:FindFirstChild("HumanoidRootPart") then
+							local distance = (player.Character:WaitForChild("HumanoidRootPart").Position - plr.Character:WaitForChild("HumanoidRootPart").Position).Magnitude
+							if distance <= tonumber(radiusDist) then
+								InNearest[plr.Name] = distance
+							end
+						end
+					elseif customCharacter then
+						if player:IsA("BasePart") and plr.Character.PrimaryPart ~= nil and plr.Character.PrimaryPart:IsA("BasePart") and player ~= plr.Character.PrimaryPart then
+							local distance = (player.Position - plr.Character.PrimaryPart.Position).Magnitude
+							if distance <= tonumber(radiusDist) then
+								InNearest[plr.Name] = distance
+							end
+						end
+					end
+				end
+			end
+		end
+	end
+	return InNearest
 end
 
 -- Encode & Decoding Binary 2.0 + Base64 (Beta)
