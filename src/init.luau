@@ -2,40 +2,27 @@
 
 -- FastNet2 (copyright @Eternity_Devs under MIT License)
 -- v0.0.8-pre-alpha (refresh)
+assert(
+	script:IsDescendantOf(game:GetService("ReplicatedStorage")),
+	"Please place the FastNet2 module into ReplicatedStorage."
+)
 
---[[
->>> Design Order (Internal Process)
-	-> Begin process "reDo" connections availables (with task.spawn for directed to next order)
-	-> Begin process "onHold" connections availables (with task.spawn for directed to next order)
-	-> Begin process "encoding" packets data connections availables
-	-> Begin process "main connections order"
-		|-> Begin process "process packing connections ordered" availables
-		|-> Begin process "repack to single-pack"
-		|-> Begin process "sent packed"
-	-> Close and clear all cache/used tables
-<<<
-]]--
-
-assert(script:IsDescendantOf(game:GetService("ReplicatedStorage")), "Please place the FastNet2 module into ReplicatedStorage.")
-
-local __load_s: any = tick()
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
 FastNet2.build = 8
 
-type Tany = { [any]: any }
-type tHold = { [string]: Tany}
-
+local __load_s: any = tick()
 --// Settings
 local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
 local _maxRate_perEvent: number = 500 -- default: 500
-local __threads: number = 50  -- default: 50
+local __threads: number = 50 -- default: 50
 local __currentMode: number = 2
 local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
-local smooth_mode: number =  2-- default: 2, Modes: 1 (Low 30), 2 (Normal 60), 3 (High 90), 4 (Ultra 120)
+local smooth_mode: number = 2 -- default: 2, Modes: 1 (Low 30), 2 (Default 60), 3 (High 90), 4 (Ultra 120)
 local useb64: boolean = false -- default: false, if it false it will use binary instead else base64 for encode
 local waitPlr: boolean = false -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
+--// End Settings
 
 if typeof(_enableLimitingRate) ~= "boolean" then
 	_enableLimitingRate = true
@@ -66,6 +53,9 @@ if _maxRate_perEvent ~= nil then
 else
 	_maxRate_perEvent = 500
 end
+
+type Tany = { [any]: any }
+type tHold = { [string]: Tany }
 
 -- FastNet2 Warehouse & Middleware
 local __callbacks: Tany = {}
@@ -131,26 +121,73 @@ if IsServer and waitPlr then
 				PlayerStatus[player.Name] = false
 			end
 			player.CharacterAdded:Connect(function(character)
-				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
+				if
+					player
+					and character
+					and character:IsDescendantOf(game:GetService("Workspace"))
+					and character:FindFirstChild("Humanoid")
+				then
 					PlayerStatus[player.Name] = true
 				else
 					task.wait(2.5) -- wait for recheck
-					if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") then
+					if
+						player
+						and character
+						and character:IsDescendantOf(game:GetService("Workspace"))
+						and character:FindFirstChild("Humanoid")
+					then
 						PlayerStatus[player.Name] = true
 					else
 						PlayerStatus[player.Name] = false
 					end
 				end
+				character:WaitForChild("Humanoid").Died:Connect(function()
+					if
+						player
+						and character
+						and character:IsDescendantOf(game:GetService("Workspace"))
+						and character:FindFirstChild("Humanoid")
+						and character:FindFirstChild("Humanoid").Health > 0
+					then
+						PlayerStatus[player.Name] = true
+					else
+						PlayerStatus[player.Name] = false
+					end
+				end)
 			end)
 			player.CharacterRemoving:Connect(function(character)
-				if character and character:IsDescendantOf(game:GetService("Workspace")) and character:FindFirstChild("Humanoid") and character:FindFirstChild("Humanoid").Health > 0 then
+				if
+					player
+					and character
+					and character:IsDescendantOf(game:GetService("Workspace"))
+					and character:FindFirstChild("Humanoid")
+					and character:FindFirstChild("Humanoid").Health > 0
+				then
 					PlayerStatus[player.Name] = true
 				else
 					PlayerStatus[player.Name] = false
 				end
 			end)
-			if player and player.Character and player.Character:IsDescendantOf(game:GetService("Workspace")) and player.Character:FindFirstChild("Humanoid") then
+			if
+				player
+				and player.Character
+				and player.Character:IsDescendantOf(game:GetService("Workspace"))
+				and player.Character:FindFirstChild("Humanoid")
+			then
 				PlayerStatus[player.Name] = true
+				player.Character:WaitForChild("Humanoid").Died:Connect(function()
+					if
+						player
+						and player.Character
+						and player.Character:IsDescendantOf(game:GetService("Workspace"))
+						and player.Character:FindFirstChild("Humanoid")
+						and player.Character:FindFirstChild("Humanoid").Health > 0
+					then
+						PlayerStatus[player.Name] = true
+					else
+						PlayerStatus[player.Name] = false
+					end
+				end)
 			end
 		end
 	end)
@@ -164,7 +201,11 @@ end
 
 --// Internal Functions
 function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
-	Debug.__direct_debug(initialized == false, "[FastNet2]: couldn't re-configure internal system settings [Already set].", 2)
+	Debug.__direct_debug(
+		initialized == false,
+		"[FastNet2]: couldn't re-configure internal system settings [Already set].",
+		2
+	)
 	if not initialized then
 		initialized = true
 		if level ~= nil and typeof(level) == "number" then
@@ -189,7 +230,7 @@ function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
 end
 function __getProvider(toBool: boolean?): any
 	if typeof(toBool) == "boolean" and toBool == true then
-		return {IsServer, IsClient}
+		return { IsServer, IsClient }
 	end
 	return IsClient and "Client" or "Server"
 end
@@ -201,28 +242,50 @@ function IsExist(remoteName: string): boolean
 	return false
 end
 
-function randNum(min: number, max:number, new: boolean | nil): number
+function randNum(min: number, max: number, new: boolean?): number
 	if new then
 		return Random.new():NextInteger(min, max)
 	end
-	return randNum(min, max)
+	return math.random(min, max)
 end
 
 function _createId(length: number | nil): string -- faster than UUID
 	if length ~= nil and tonumber(length) == nil then
-		return table.concat({randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,65535), string.char(randNum(97, 122)), randNum(1,65535)})
+		return table.concat({
+			randNum(11, 999, true),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			randNum(11, 999, true),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			randNum(11, 65535, true),
+			string.char(randNum(97, 122)),
+			randNum(1, 65535, true),
+		})
 	end
 	if length == nil or length < 5 or length > 16 then
-		return table.concat({randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,999), string.char(randNum(97, 122)), string.char(randNum(97, 122)), randNum(11,65535), string.char(randNum(97, 122)), randNum(1,65535)})
+		return table.concat({
+			randNum(11, 999, true),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			randNum(11, 999, true),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			randNum(11, 65535, true),
+			string.char(randNum(97, 122)),
+			randNum(1, 65535, true),
+		})
 	else
 		local _rand: Tany = {}
-		for i=1,length do
-			if randNum(1, 4) == 4 then
-				table.insert(_rand, randNum(11,999))
-			elseif randNum(1, 2) == 2 then
-				table.insert(_rand, randNum(1,99))
+		for i = 1, length do
+			if randNum(1, 4, true) == 4 then
+				table.insert(_rand, randNum(11, 999, true))
+			elseif randNum(1, 2, true) == 2 then
+				table.insert(_rand, randNum(1, 99, true))
 			else
-				table.insert(_rand, string.char(randNum(97, 122)))
+				table.insert(_rand, string.char(randNum(97, 122, true)))
 			end
 		end
 		return table.concat(_rand)
@@ -258,7 +321,11 @@ function _removeIdentifier(IdentifierName: string): boolean
 	return _findIdentifier(IdentifierName)
 end
 function _createSignal(remoteName: string)
-	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Couldn't create signal, Spesific remote not exists.", 2)
+	Debug.__direct_debug(
+		__nets[remoteName] ~= nil,
+		"[FastNet2]: Couldn't create signal, Spesific remote not exists.",
+		2
+	)
 	if __nets[remoteName] and _signals[remoteName] == nil then
 		_signals[remoteName] = {}
 	end
@@ -300,8 +367,8 @@ function FastNet2.toBestFormNum(num: number): number | string
 	return Driver.toBestFormNum(num)
 end
 
-function FastNet2.Nearest(player: Player, radiusDist: any, customCharacter: boolean?): {Player}
-	return Driver.Nearest(player, radiusDist, customCharacter)
+function FastNet2.fps()
+	return RunService.Heartbeat:Wait()
 end
 
 function FastNet2.Wait(): number
@@ -309,7 +376,8 @@ function FastNet2.Wait(): number
 	Somereason just use PostSimulator as Heartbeat because Heartbeat only fire after Render Signal fire here why if the server/client dropped frame
 	could be bad, PostSimulator is the new of Heartbeat, PostSimultion dont need to wait until Render Signal fired.
 	PostSimulation is 1/60 or print(RunService.PostSimulation:Wait())
-	]]--
+	]]
+	--
 	return RunService.PostSimulation:Wait() -- 60 frame / 0.0166s / 16.66ms
 end
 function FastNet2.wait(): number
@@ -343,7 +411,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			until finish == true
 			finish = true
 		end)
-		while (not finish) do
+		while not finish do
 			if (tick() - _t) >= waitFor then
 				finish = true
 				task.cancel(_yield)
@@ -358,15 +426,17 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	local __disconnected = false
 	-- functions
 	function __new:Wait(): number -- EXPERIMENTAL
-		local _now,this = tick(), _createId()
-		local val,_on = 0,true
-		_signals[remoteName]["_signal"..this] = function()
+		local _now, this = tick(), _createId()
+		local val, _on = 0, true
+		_signals[remoteName]["_signal" .. this] = function()
 			val = tick()
 			_on = false
 		end
-		repeat task.wait() until _on == false
-		_signals[remoteName]["_signal"..this] = nil
-		return (val-_now)
+		repeat
+			task.wait()
+		until _on == false
+		_signals[remoteName]["_signal" .. this] = nil
+		return (val - _now)
 	end
 	function __new:wait(): number
 		return self:Wait()
@@ -388,11 +458,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			}
 		end
 		__callbacks[remoteName]["_type"] = __nets[remoteName]._type
-		if not table.isfrozen(self) then
-			return table.freeze(self)
-		else
-			return self
-		end
+		return table.freeze(self)
 	end
 	function __new:listen(waitTill: boolean | any, callbacks: any)
 		return self:Listen(waitTill, callbacks)
@@ -410,12 +476,17 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		function __new:Disconnect(message: string?)
 			if __new and __callbacks[remoteName] ~= nil and __disconnected == false then
 				if __callbacks[remoteName]["_once"] ~= nil then
-					Debug.__direct_debug(__callbacks[remoteName]["_once"] == true, "[FastNet2]: Couldn't disconnect due :Once still on, try again.", 3, 2)
+					Debug.__direct_debug(
+						__callbacks[remoteName]["_once"] == true,
+						"[FastNet2]: Couldn't disconnect due :Once still on, try again.",
+						3,
+						2
+					)
 				end
 				__callbacks[remoteName] = nil
 				__disconnected = true
 				if message and typeof(message) == "string" and message:len() > 0 then
-					Debug.__direct_debug(message:len() <= 0, "[FastNet2]: "..message, 2)
+					Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
 				end
 			end
 		end
@@ -425,43 +496,25 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		if IsServer then
 			function __new:Fires(...: any)
 				local _currentIdentifier: Tany = _toSend[remoteName]
-				if not _currentIdentifier then
-					if IsExist(remoteName) then
-						_currentIdentifier = _createIdentifier(remoteName)
-					end
+				if IsExist(remoteName) and _currentIdentifier then
+					table.insert(_currentIdentifier, { "All", { ... } })
 				end
-				table.insert(_currentIdentifier, { "All", { ... } })
 			end
 			function __new:Fire(player: Player, ...: any)
 				local _currentIdentifier: Tany = _toSend[remoteName]
-				if not _currentIdentifier then
-					if IsExist(remoteName) then
-						_currentIdentifier = _createIdentifier(remoteName)
-					end
+				if IsExist(remoteName) and _currentIdentifier then
+					table.insert(_currentIdentifier, { player, { ... } })
 				end
-				table.insert(_currentIdentifier, { player, { ... } })
 			end
 		else
 			function __new:Fire(...: any)
-				if not _toSend[remoteName] then
-					if IsExist(remoteName) then
-						_createIdentifier(remoteName)
-					else
-						return
-					end
-				end
-				--local _currentIdentifier: Tany = _toSend[remoteName]
-				--if not _currentIdentifier then
-				--	if IsExist(remoteName) then
-				--		_currentIdentifier = _createIdentifier(remoteName)
-				--	end
-				--end
-				if _enableLimitingRate then -- rate limit for client only
-					if #_toSend[remoteName] > (_maxRate_perEvent or 500) then
+				local _currentIdentifier: Tany = _toSend[remoteName]
+				if IsExist(remoteName) and _currentIdentifier then
+					if _enableLimitingRate and #_currentIdentifier > (_maxRate_perEvent or 500) then -- rate limit for client only
 						return -- reject
 					end
+					table.insert(_currentIdentifier, { ... })
 				end
-				table.insert(_toSend[remoteName], { ... })
 			end
 		end
 		function __new:Disconnected(): boolean
@@ -475,41 +528,38 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			function __new:Pull(player: Player, timeout: number, ...: any): any?
 				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2)
 				local _currentIdentifier: Tany = _toSend[remoteName]
-				if not _currentIdentifier then
-					if IsExist(remoteName) then
-						_currentIdentifier = _createIdentifier(remoteName)
+				if IsExist(remoteName) and _currentIdentifier then
+					if not _signals[remoteName] then
+						_createSignal(remoteName)
 					end
-				end
-				if not _signals[remoteName] then
-					_createSignal(remoteName)
-				end
-				if timeout and typeof(timeout) == "number" then
-					if timeout < 5 then
+					if timeout and typeof(timeout) == "number" then
+						if timeout < 5 then
+							timeout = 5
+						end
+					else
 						timeout = 5
 					end
-				else
-					timeout = 5
-				end
-				local finish, _t, toreturn = false, tick(), nil
-				local _makeId = _createId()
-				local tosend: any = {...}
-				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
-					finish = true
-					toreturn = (...)
-				end
-				local _yield = task.spawn(function()
-					table.insert(_currentIdentifier, {player, {_makeId, tosend}})
-				end)
-				while (not finish) do
-					if (tick() - _t) >= timeout then
+					local finish, _t, toreturn = false, tick(), nil
+					local _makeId = _createId()
+					local tosend: any = { ... }
+					_signals[remoteName]["_invokeSignal" .. _makeId] = function(...)
 						finish = true
-						task.cancel(_yield)
-						break
+						toreturn = (...)
 					end
-					task.wait()
+					local _yield = task.spawn(function()
+						table.insert(_currentIdentifier, { player, { _makeId, tosend } })
+					end)
+					while not finish do
+						if (tick() - _t) >= timeout then
+							finish = true
+							task.cancel(_yield)
+							break
+						end
+						task.wait()
+					end
+					_signals[remoteName]["_invokeSignal" .. _makeId] = nil
+					return toreturn
 				end
-				_signals[remoteName]["_invokeSignal".._makeId] = nil
-				return toreturn
 			end
 			function __new:pull(player: Player, timeout: number, ...: any): any?
 				return self:Pull(player, timeout, ...)
@@ -517,41 +567,38 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		else
 			function __new:Pull(timeout: number, ...: any): any?
 				local _currentIdentifier: Tany = _toSend[remoteName]
-				if not _currentIdentifier then
-					if IsExist(remoteName) then
-						_currentIdentifier = _createIdentifier(remoteName)
+				if IsExist(remoteName) and _currentIdentifier then
+					if not _signals[remoteName] then
+						_createSignal(remoteName)
 					end
-				end
-				if not _signals[remoteName] then
-					_createSignal(remoteName)
-				end
-				if timeout and typeof(timeout) == "number" then
-					if timeout < 5 then
+					if timeout and typeof(timeout) == "number" then
+						if timeout < 5 then
+							timeout = 5
+						end
+					else
 						timeout = 5
 					end
-				else
-					timeout = 5
-				end
-				local finish, _t, toreturn = false, tick(), nil
-				local _makeId = _createId()
-				local tosend: any = {...}
-				_signals[remoteName]["_invokeSignal".._makeId] = function(...)
-					finish = true
-					toreturn = (...)
-				end
-				local _yield = task.spawn(function()
-					table.insert(_currentIdentifier, {_makeId, tosend})
-				end)
-				while (not finish) do
-					if (tick() - _t) >= timeout then
+					local finish, _t, toreturn = false, tick(), nil
+					local _makeId = _createId()
+					local tosend: any = { ... }
+					_signals[remoteName]["_invokeSignal" .. _makeId] = function(...)
 						finish = true
-						task.cancel(_yield)
-						break
+						toreturn = (...)
 					end
-					task.wait()
+					local _yield = task.spawn(function()
+						table.insert(_currentIdentifier, { _makeId, tosend })
+					end)
+					while not finish do
+						if (tick() - _t) >= timeout then
+							finish = true
+							task.cancel(_yield)
+							break
+						end
+						task.wait()
+					end
+					_signals[remoteName]["_invokeSignal" .. _makeId] = nil
+					return toreturn
 				end
-				_signals[remoteName]["_invokeSignal".._makeId] = nil
-				return toreturn
 			end
 			function __new:pull(player: Player, timeout: number, ...: any): any?
 				return self:Pull(player, timeout, ...)
@@ -592,13 +639,15 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 	if not IsExist(remoteName) then
 		if typeof(typeRemote) == "string" then
 			typeRemote = typeRemote:lower()
-			if typeRemote == "event"
+			if
+				typeRemote == "event"
 				or typeRemote == "events"
 				or typeRemote == "remoteevent"
 				or typeRemote == "remoteevents"
 				or typeRemote == "re"
 				or typeRemote == "remote"
-				or typeRemote == "remotes" then
+				or typeRemote == "remotes"
+			then
 				__nets[remoteName] = {
 					_type = "re",
 					name = remoteName,
@@ -614,7 +663,7 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 			then
 				__nets[remoteName] = {
 					_type = "rf",
-					name = remoteName
+					name = remoteName,
 				}
 				-- Debug.__direct_debug(1 ~= 1, "[FastNet2]: RemoteFunction features is currently not available.", 2)
 			end
@@ -630,270 +679,302 @@ end
 debug.setmemorycategory("FastNet2")
 if IsServer then
 	_NetEvent.OnServerEvent:Connect(function(plr, pkg)
-		if pkg and typeof(pkg) == "table" then
-			debug.profilebegin("FastNet2.server")
-			for identifier: string, v in pkg do
-				if typeof(identifier) == "string" then
-					if #v <= 0 then
-						break
-					end
-					if
-						_findIdentifier(identifier)
-						and IsExist(identifier)
-						and __callbacks[identifier] ~= nil
-						and __callbacks[identifier]["func"] ~= nil
-					then
-						local to_returns_invoke: any = {} -- middleware
-						local index_invokes: number = 0
-						for index, data in v do
-							if __callbacks[identifier] ~= nil then
-								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
-									local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
-									table.insert(to_returns_invoke, {data[1], {_call}})
-								elseif typeof(data[1]) == "table" then
-									-- if plr and waitPlr and PlayerStatus[plr.Name] == true then
-									-- 	if __callbacks[identifier] ~= nil then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	end
-									-- elseif plr and waitPlr then
-									-- 	table.insert(_onHold[plr.Name], data)
-									-- elseif not waitPlr then
-									-- 	if __callbacks[identifier] ~= nil then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	end
-									-- end
-									if __callbacks[identifier] ~= nil and _enableEncoding then
-										if typeof(data) == "table" then
-											for indexs, to_encode in data do
-												data[indexs] = Driver.dec(useb64 or false, to_encode)
-											end
+		debug.profilebegin("FastNet2.server")
+		for identifier: string, v in pkg do
+			if typeof(identifier) == "string" then
+				if #v <= 0 then
+					break
+				end
+				if
+					_findIdentifier(identifier)
+					and IsExist(identifier)
+					and __callbacks[identifier] ~= nil
+					and __callbacks[identifier]["func"] ~= nil
+				then
+					local to_returns_invoke: any = {} -- middleware
+					local index_invokes: number = 0
+					for index, data in v do
+						if __callbacks[identifier] ~= nil then
+							if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+								local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
+								table.insert(to_returns_invoke, { data[1], { _call } })
+							elseif typeof(data[1]) == "table" then
+								-- if plr and waitPlr and PlayerStatus[plr.Name] == true then
+								-- 	if __callbacks[identifier] ~= nil then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	end
+								-- elseif plr and waitPlr then
+								-- 	table.insert(_onHold[plr.Name], data)
+								-- elseif not waitPlr then
+								-- 	if __callbacks[identifier] ~= nil then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	end
+								-- end
+								if __callbacks[identifier] ~= nil and _enableEncoding then
+									if typeof(data) == "table" then
+										for indexs, to_encode in data do
+											data[indexs] = Driver.dec(useb64 or false, to_encode)
 										end
-										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									end
-									for _index, datas in table.unpack(v) do
-										if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
-											if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
-												if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-													Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
-												end
-											elseif plr and identifier ~= nil and __callbacks[identifier] ~= nil and __callbacks[identifier]["func"] ~= nil then
-												if _enableEncoding then
-													if typeof(datas) == "table" then
-														for indexs, to_encode in datas do
-															datas[indexs] = Driver.dec(useb64 or false, to_encode)
-														end
-													end
-												end
-												Threads(__callbacks[identifier]["func"], plr, table.unpack(datas or {}))
-											else
-												v[_index] = nil
+									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								end
+								for _index, datas in table.unpack(v) do
+									if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+										if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
+											if
+												_signals[identifier] ~= nil
+												and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
+											then
+												Threads(
+													_signals[identifier]["_invokeSignal" .. datas[1]],
+													table.unpack(datas[2] or {})
+												)
 											end
-										elseif plr and identifier ~= nil and __callbacks[identifier] ~= nil and __callbacks[identifier]["func"] ~= nil and datas ~= nil then
-											local _cb = {datas}
+										elseif
+											plr
+											and identifier ~= nil
+											and __callbacks[identifier] ~= nil
+											and __callbacks[identifier]["func"] ~= nil
+										then
 											if _enableEncoding then
-												for indexs, to_encode in _cb do
-													if typeof(to_encode) == "table" then
-														for _i,x in to_encode do
-															_cb[indexs][_i] = Driver.dec(useb64 or false, x)
-														end
-													else
-														_cb[indexs] = Driver.dec(useb64 or false, to_encode)
+												if typeof(datas) == "table" then
+													for indexs, to_encode in datas do
+														datas[indexs] = Driver.dec(useb64 or false, to_encode)
 													end
 												end
 											end
-											Threads(__callbacks[identifier]["func"], plr, table.unpack(_cb or {}))
+											Threads(__callbacks[identifier]["func"], plr, table.unpack(datas or {}))
 										else
 											v[_index] = nil
 										end
-									end
-								else
-									-- if __callbacks[identifier] ~= nil then
-									-- 	if plr and waitPlr and PlayerStatus[plr.Name] == true then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	elseif plr and waitPlr then
-									-- 		table.insert(_onHold[plr.Name], data)
-									-- 	elseif not waitPlr then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	end
-									-- end
-									if __callbacks[identifier] ~= nil and _enableEncoding then
-										if typeof(data) == "table" then
-											for indexs, to_encode in data do
-												data[indexs] = Driver.dec(useb64 or false, to_encode)
-											end
-										end
-										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									end
-								end
-								if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
-									__callbacks[identifier] = nil
-								end
-							end
-						end
-						if #to_returns_invoke > 0 then
-							table.insert(_toSend[identifier], {plr, to_returns_invoke})
-							table.clear(to_returns_invoke) -- prevent memory leaks?
-						end
-						task.spawn(function()
-							debug.profilebegin("signal")
-							for i,_call in _signals[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-							debug.profileend()
-						end)
-					elseif -- invoke response
-						_findIdentifier(identifier)
-						and IsExist(identifier)
-					then
-						for index, datas in table.unpack(v) do
-							if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-								Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
-							end
-						end
-						task.spawn(function()
-							debug.profilebegin("signal")
-							for i,_call in _signals[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-							debug.profileend()
-						end)
-					end
-				end
-			end
-			debug.profileend()
-			table.clear(pkg) -- prevent memory leaks?
-		end
-	end)
-elseif IsClient then
-	_NetEvent.OnClientEvent:Connect(function(pkg)
-		if pkg and typeof(pkg) == "table" then
-			debug.profilebegin("FastNet2.client")
-			for identifier: string, _data in pkg do
-				if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
-					if
-						_findIdentifier(identifier)
-						and IsExist(identifier)
-						and __callbacks[identifier] ~= nil
-						and __callbacks[identifier]["func"] ~= nil
-					then
-						local to_returns_invoke: any = {} -- middleware
-						local index_invokes: number = 0
-						for index, data in _data do
-							if __callbacks[identifier] ~= nil then
-								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
-									local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
-									table.insert(to_returns_invoke, {data[1], {_call}})
-								elseif typeof(data[1]) == "table" then
-									if __callbacks[identifier] ~= nil then
-										Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
-									end
-									for _index, datas in table.unpack(_data) do
-										if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
-											if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
-												if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-													Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
-												else
-													if not _reDo[identifier] then
-														_reDo[identifier] = {}
+									elseif
+										plr
+										and identifier ~= nil
+										and __callbacks[identifier] ~= nil
+										and __callbacks[identifier]["func"] ~= nil
+										and datas ~= nil
+									then
+										local _cb = { datas }
+										if _enableEncoding then
+											for indexs, to_encode in _cb do
+												if typeof(to_encode) == "table" then
+													for _i, x in to_encode do
+														_cb[indexs][_i] = Driver.dec(useb64 or false, x)
 													end
-													table.insert(_reDo[identifier], _data)
+												else
+													_cb[indexs] = Driver.dec(useb64 or false, to_encode)
 												end
 											end
 										end
-									end
-								else
-									Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
-								end
-								if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
-									__callbacks[identifier] = nil
-								end
-							end
-						end
-						if #to_returns_invoke > 0 then
-							table.insert(_toSend[identifier], to_returns_invoke)
-							table.clear(to_returns_invoke) -- prevent memory leaks?
-						end
-						task.spawn(function()
-							debug.profilebegin("signal")
-							for i,_call in _signals[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
-								end
-							end
-							debug.profileend()
-						end)
-					elseif -- invoke response
-						_findIdentifier(identifier)
-						and IsExist(identifier)
-					then
-						for index, datas in table.unpack(_data) do
-							if typeof(index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
-								if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
-									if _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-										Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+										Threads(__callbacks[identifier]["func"], plr, table.unpack(_cb or {}))
 									else
-										if not _reDo[identifier] then
-											_reDo[identifier] = {}
-										end
-										table.insert(_reDo[identifier], _data)
+										v[_index] = nil
 									end
 								end
-							end
-						end
-						task.spawn(function()
-							debug.profilebegin("signal")
-							for i,_call in _signals[identifier] do
-								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-									_call()
+							else
+								-- if __callbacks[identifier] ~= nil then
+								-- 	if plr and waitPlr and PlayerStatus[plr.Name] == true then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	elseif plr and waitPlr then
+								-- 		table.insert(_onHold[plr.Name], data)
+								-- 	elseif not waitPlr then
+								-- 		if _enableEncoding then
+								-- 			if typeof(data) == "table" then
+								-- 				for indexs, to_encode in data do
+								-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
+								-- 				end
+								-- 			end
+								-- 		end
+								-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+								-- 	end
+								-- end
+								if __callbacks[identifier] ~= nil and _enableEncoding then
+									if typeof(data) == "table" then
+										for indexs, to_encode in data do
+											data[indexs] = Driver.dec(useb64 or false, to_encode)
+										end
+									end
+									Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 								end
 							end
-							debug.profileend()
-						end)
+							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+								__callbacks[identifier] = nil
+							end
+						end
 					end
+					if #to_returns_invoke > 0 then
+						table.insert(_toSend[identifier], { plr, to_returns_invoke })
+						table.clear(to_returns_invoke) -- prevent memory leaks?
+					end
+					task.spawn(function()
+						debug.profilebegin("signal")
+						for i, _call in _signals[identifier] do
+							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								_call()
+							end
+						end
+						debug.profileend()
+					end)
+				elseif -- invoke response
+					_findIdentifier(identifier) and IsExist(identifier)
+				then
+					for index, datas in table.unpack(v) do
+						if
+							typeof(index) == "number"
+							and typeof(datas) == "table"
+							and _signals[identifier] ~= nil
+							and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
+						then
+							Threads(_signals[identifier]["_invokeSignal" .. datas[1]], table.unpack(datas[2] or {}))
+						end
+					end
+					task.spawn(function()
+						debug.profilebegin("signal")
+						for i, _call in _signals[identifier] do
+							if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+								_call()
+							end
+						end
+						debug.profileend()
+					end)
 				end
 			end
-			debug.profileend()
-			table.clear(pkg) -- prevent memory leaks?
 		end
+		debug.profileend()
+		table.clear(pkg) -- prevent memory leaks?
+	end)
+elseif IsClient then
+	_NetEvent.OnClientEvent:Connect(function(pkg)
+		debug.profilebegin("FastNet2.client")
+		for identifier: string, _data in pkg do
+			if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
+				if
+					_findIdentifier(identifier)
+					and IsExist(identifier)
+					and __callbacks[identifier] ~= nil
+					and __callbacks[identifier]["func"] ~= nil
+				then
+					local to_returns_invoke: any = {} -- middleware
+					local index_invokes: number = 0
+					for index, data in _data do
+						if __callbacks[identifier] ~= nil then
+							if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+								local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
+								table.insert(to_returns_invoke, { data[1], { _call } })
+							elseif typeof(data[1]) == "table" then
+								if __callbacks[identifier] ~= nil then
+									Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+								end
+								for _index, datas in table.unpack(_data) do
+									if typeof(_index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+										if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
+											if
+												_signals[identifier] ~= nil
+												and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
+											then
+												Threads(
+													_signals[identifier]["_invokeSignal" .. datas[1]],
+													table.unpack(datas[2] or {})
+												)
+											else
+												if not _reDo[identifier] then
+													_reDo[identifier] = {}
+												end
+												table.insert(_reDo[identifier], _data)
+											end
+										end
+									end
+								end
+							else
+								Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+							end
+							if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+								__callbacks[identifier] = nil
+							end
+						end
+					end
+					if _toSend[identifier] and #to_returns_invoke > 0 then
+						table.insert(_toSend[identifier], to_returns_invoke)
+						table.clear(to_returns_invoke) -- prevent memory leaks?
+					end
+					task.spawn(function()
+						if _signals[identifier] then
+							debug.profilebegin("signal")
+							for i, _call in _signals[identifier] do
+								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+									task.spawn(_call)
+								end
+							end
+							debug.profileend()
+						end
+					end)
+				elseif -- invoke response
+					_findIdentifier(identifier) and IsExist(identifier)
+				then
+					for index, datas in table.unpack(_data) do
+						if typeof(index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
+							if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
+								if
+									_signals[identifier] ~= nil
+									and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
+								then
+									Threads(
+										_signals[identifier]["_invokeSignal" .. datas[1]],
+										table.unpack(datas[2] or {})
+									)
+								else
+									if not _reDo[identifier] then
+										_reDo[identifier] = {}
+									end
+									table.insert(_reDo[identifier], _data)
+								end
+							end
+						end
+					end
+					task.spawn(function()
+						if _signals[identifier] then
+							debug.profilebegin("signal")
+							for i, _call in _signals[identifier] do
+								if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+									task.spawn(_call)
+								end
+							end
+							debug.profileend()
+						end
+					end)
+				end
+			end
+		end
+		debug.profileend()
+		table.clear(pkg) -- prevent memory leaks?
 	end)
 end
 
 -- Internal Events Handler
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
-	if (os.clock() - __t) >= smooth_mode or (1 / 60 - 0.00015) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
+	if (os.clock() - __t) >= (smooth_mode or (1 / 60 - 0.00015)) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
 		debug.profilebegin("FastNet2.Internal.process")
 		task.spawn(function()
 			debug.profilebegin("redo")
@@ -908,36 +989,52 @@ RunService.PostSimulation:Connect(function()
 							and __callbacks[identifier]["func"] ~= nil
 						then
 							local to_returns_invoke: any = {}
-							local index_invokes: number = 0
 							for index, data in _data do
 								if __callbacks[identifier] ~= nil then
-									if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+									if
+										typeof(data) == "table"
+										and typeof(data[1]) == "number"
+										and _signals[identifier]
+									then
 										local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
-										table.insert(to_returns_invoke, {data[1], {_call}})
+										table.insert(to_returns_invoke, { data[1], { _call } })
 									else
 										if __callbacks[identifier] ~= nil then
 											Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
 										else
 											for index, datas in table.unpack(_data) do
-												if typeof(index) == "number" and typeof(datas) == "table" and _signals[identifier] ~= nil and _signals[identifier]["_invokeSignal"..datas[1]] ~= nil then
-													Threads(_signals[identifier]["_invokeSignal"..datas[1]], table.unpack(datas[2] or {}))
+												if
+													typeof(index) == "number"
+													and typeof(datas) == "table"
+													and _signals[identifier] ~= nil
+													and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
+												then
+													Threads(
+														_signals[identifier]["_invokeSignal" .. datas[1]],
+														table.unpack(datas[2] or {})
+													)
 												end
 											end
 										end
 									end
-									if __callbacks[identifier]["_once"] ~= nil and __callbacks[identifier]["_once"] == true then
+									if
+										__callbacks[identifier]["_once"] ~= nil
+										and __callbacks[identifier]["_once"] == true
+									then
 										__callbacks[identifier] = nil
 									end
 									table.remove(_data, index)
 								end
 							end
 							task.spawn(function()
-								if #to_returns_invoke > 0 then
+								if _toSend[identifier] and #to_returns_invoke > 0 then
 									table.insert(_toSend[identifier], to_returns_invoke)
 								end
-								for i,_call in _signals[identifier] do
-									if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-										_call()
+								if _signals[identifier] then
+									for i, _call in _signals[identifier] do
+										if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+											task.spawn(_call)
+										end
 									end
 								end
 							end)
@@ -955,18 +1052,19 @@ RunService.PostSimulation:Connect(function()
 						continue
 					end
 					for identifier: string, datas in data do
-						if #datas > 0 then
+						if typeof(datas) == "table" and #datas > 0 then
 							for index: number, _data in datas do
 								if
 									_findIdentifier(identifier)
 									and IsExist(identifier)
+									and _data
+									and player
+									and Players[player]
 								then
-									if player and Players[player] then
-										if waitPlr and PlayerStatus[player] == true then
-											_NetEvent:FireClient(Players[player], {[identifier] = _data})
-										elseif not waitPlr then
-											_NetEvent:FireClient(Players[player], {[identifier] = _data})
-										end
+									if waitPlr and PlayerStatus[player] == true then
+										_NetEvent:FireClient(Players[player], { [identifier] = _data })
+									elseif not waitPlr then
+										_NetEvent:FireClient(Players[player], { [identifier] = _data })
 									end
 									table.remove(datas, index)
 								end
@@ -981,19 +1079,17 @@ RunService.PostSimulation:Connect(function()
 		if IsClient and _enableEncoding then
 			debug.profilebegin("encode")
 			for identifier: string, packages in _toSend do
-				if typeof(packages) == "table" and #packages > 0 then
+				if identifier and typeof(packages) == "table" and #packages > 0 then
 					local encoded = packages
-					for i,datas in encoded do
-						if not _toSend[identifier] then break end
+					for i, datas in encoded do
 						if typeof(datas) == "table" then
 							for index, _d in datas do
 								encoded[i][index] = Driver.enc(useb64 or false, _d)
 							end
 						end
 					end
-					if _toSend[identifier] then
-						_toSend[identifier] = encoded
-					end
+					_toSend[identifier] = encoded
+					table.clear(encoded)
 				end
 			end
 			debug.profileend()
@@ -1031,7 +1127,7 @@ RunService.PostSimulation:Connect(function()
 					continue
 				end
 				task.spawn(function()
-					if IsExist(identifier) and not to_send["Client"][identifier] then
+					if IsExist(identifier) then
 						to_send["Client"][identifier] = packages
 						__Cindex += 1
 					end
@@ -1045,7 +1141,7 @@ RunService.PostSimulation:Connect(function()
 					continue
 				end
 				task.spawn(function()
-					if IsExist(identifier) and not to_send["Server"][identifier] then
+					if IsExist(identifier) then
 						to_send["Server"][identifier] = packages
 						__Sindex += 1
 					end
@@ -1059,27 +1155,20 @@ RunService.PostSimulation:Connect(function()
 			local to_send_all_indexs: number = 0
 			local to_send_indexs: number = 0
 			for identifier: string, _pkgs in to_send["Server"] do
-				if identifier and _pkgs then
-					for index, data in _pkgs do
-						if not to_send["Server"][identifier] then continue end
-						if index and data then
-							if typeof(data[1]) == "Instance" then
-								if not to_send_to_client[identifier] then
-									to_send_to_client[identifier] = {}
-									to_send_to_client[identifier][data[1]] = {}
-								end
-								if to_send_to_client[identifier] and to_send_to_client[identifier][data[1]] then
-									table.insert(to_send_to_client[identifier][data[1]], data[2])
-									to_send_indexs += 1
-								end
-							else
-								if not to_send_all_clients[identifier] then
-									to_send_all_clients[identifier] = {}
-								end
-								table.insert(to_send_all_clients[identifier], data[2])
-								to_send_all_indexs += 1
-							end
+				for index, data in _pkgs do
+					if identifier and typeof(data[1]) == "Instance" then
+						if not to_send_to_client[identifier] then
+							to_send_to_client[identifier] = {}
+							to_send_to_client[identifier][data[1]] = {}
 						end
+						table.insert(to_send_to_client[identifier][data[1]], data[2])
+						to_send_indexs += 1
+					elseif identifier then
+						if not to_send_all_clients[identifier] then
+							to_send_all_clients[identifier] = {}
+						end
+						table.insert(to_send_all_clients[identifier], data[2])
+						to_send_all_indexs += 1
 					end
 				end
 			end
@@ -1089,28 +1178,21 @@ RunService.PostSimulation:Connect(function()
 			end
 			if to_send_indexs > 0 then
 				for identifier: string, pkg in to_send_to_client do
-					if identifier and pkg then
-						for player, _data in pkg do
-							if not to_send_to_client[identifier] then continue end
-							if player and _data then
-								-- local _convert = {}
-								-- _convert[identifier] = _data
-								if player and waitPlr and PlayerStatus[player.Name] == true then
-									_NetEvent:FireClient(player, {[identifier] = _data})
-								elseif not waitPlr then
-									_NetEvent:FireClient(player, {[identifier] = _data})
-								else
-									if not _onHold[player.Name] then
-										_onHold[player.Name] = {}
-									end
-									if _onHold[player.Name] and not _onHold[player.Name][identifier] then
-										_onHold[player.Name][identifier] = {}
-									end
-									if _onHold[player.Name] and _onHold[player.Name][identifier] then
-										table.insert(_onHold[player.Name][identifier], _data)
-									end
-								end
+					for player, _data in pkg do
+						-- local _convert = {}
+						-- _convert[identifier] = _data
+						if player and waitPlr and PlayerStatus[player.Name] == true then
+							_NetEvent:FireClient(player, { [identifier] = _data })
+						elseif player and not waitPlr then
+							_NetEvent:FireClient(player, { [identifier] = _data })
+						elseif player then
+							if not _onHold[player.Name] then
+								_onHold[player.Name] = {}
 							end
+							if _onHold[player.Name] and not _onHold[player.Name][identifier] then
+								_onHold[player.Name][identifier] = {}
+							end
+							table.insert(_onHold[player.Name][identifier], _data)
 						end
 					end
 				end
@@ -1127,6 +1209,16 @@ RunService.PostSimulation:Connect(function()
 end)
 
 reConfigure(__currentMode or 2)
-Debug.__direct_debug(1 ~= 1, string.format("FastNet2 initialized [ver_%s (%s) | %s | %sms]", FastNet2.version, tostring(FastNet2.build), __getProvider(), (tick() - __load_s)*1000), 2)
+Debug.__direct_debug(
+	1 ~= 1,
+	string.format(
+		"FastNet2 initialized [ver_%s (%s) | %s | %sms]",
+		FastNet2.version,
+		tostring(FastNet2.build),
+		__getProvider(),
+		(tick() - __load_s) * 1000
+	),
+	2
+)
 
 return table.freeze(FastNet2)
