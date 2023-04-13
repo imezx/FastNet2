@@ -195,7 +195,7 @@ function Driver.enc(b64: boolean, data: any): any
 		end
 		return data
 	elseif typeof(data) == "table" then
-		for i,datas in data do
+		for i,datas: any in data do
 			if typeof(datas) == "number" or tonumber(datas) ~= nil then
 				datas = tostring(datas)
 			end
@@ -204,8 +204,8 @@ function Driver.enc(b64: boolean, data: any): any
 					data[i] = base64.enc(datas)
 				else
 					local binary = ""
-					for i = 1, #data do
-						local byte = string.byte(data, i)
+					for i = 1, #datas do
+						local byte = string.byte(datas, i)
 						for j = 7, 0, -1 do
 							binary ..= bit32.band(bit32.rshift(byte, j), 1)
 						end
