@@ -142,7 +142,7 @@ if IsServer and waitPlr then
 					and character:FindFirstChild("Humanoid")
 				then
 					PlayerStatus[player.Name] = true
-				else
+				elseif player then
 					task.wait(2.5) -- wait for recheck
 					if
 						player
@@ -151,7 +151,7 @@ if IsServer and waitPlr then
 						and character:FindFirstChild("Humanoid")
 					then
 						PlayerStatus[player.Name] = true
-					else
+					elseif player then
 						PlayerStatus[player.Name] = false
 					end
 				end
@@ -164,7 +164,7 @@ if IsServer and waitPlr then
 						and character:FindFirstChild("Humanoid").Health > 0
 					then
 						PlayerStatus[player.Name] = true
-					else
+					elseif player then
 						PlayerStatus[player.Name] = false
 					end
 				end)
@@ -178,7 +178,7 @@ if IsServer and waitPlr then
 					and character:FindFirstChild("Humanoid").Health > 0
 				then
 					PlayerStatus[player.Name] = true
-				else
+				elseif player then
 					PlayerStatus[player.Name] = false
 				end
 			end)
@@ -198,7 +198,7 @@ if IsServer and waitPlr then
 						and player.Character:FindFirstChild("Humanoid").Health > 0
 					then
 						PlayerStatus[player.Name] = true
-					else
+					elseif player then
 						PlayerStatus[player.Name] = false
 					end
 				end)
@@ -260,7 +260,7 @@ function randNum(min: number, max: number, new: boolean?): number
 	return math.random(min, max)
 end
 
-function _createId(length: number | nil): string -- faster than UUID
+function _createId(length: number | nil): string | number
 	if length ~= nil and tonumber(length) == nil then
 		return table.concat({
 			randNum(11, 999, true),
@@ -366,7 +366,7 @@ function FastNet2.CreateUUID(): string
 	return Driver.CreateUUID()
 end
 
-function FastNet2.randStr(length: number?): string
+function FastNet2.randStr(length: number?): number | string
 	return _createId(length)
 end
 
@@ -378,7 +378,10 @@ function FastNet2.toBestFormNum(num: number): number | string
 	return Driver.toBestFormNum(num)
 end
 
-function FastNet2.fps()
+function FastNet2.fps(convert: boolean?)
+	if convert then
+		return (1/RunService.Heartbeat:Wait())
+	end
 	return RunService.Heartbeat:Wait()
 end
 
@@ -618,6 +621,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 					_signals[remoteName]["_invokeSignal" .. _makeId] = nil
 					return toreturn
 				end
+				return nil
 			end
 			function __new:pull(player: Player, timeout: number, ...: any): any?
 				return self:Pull(player, timeout, ...)
@@ -1115,25 +1119,6 @@ RunService.PostSimulation:Connect(function()
 				debug.profileend()
 			end
 		end)
-		-- Encoder
-		if IsClient and _enableEncoding then
-			debug.profilebegin("encode")
-			for identifier: string, packages in _toSend do
-				if identifier and typeof(packages) == "table" and #packages > 0 then
-					local encoded = packages
-					for i, datas in encoded do
-						if typeof(datas) == "table" then
-							for index, _d in datas do
-								encoded[i][index] = Driver.enc(useb64 or false, _d)
-							end
-						end
-					end
-					_toSend[identifier] = encoded
-					table.clear(encoded)
-				end
-			end
-			debug.profileend()
-		end
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
@@ -1166,13 +1151,27 @@ RunService.PostSimulation:Connect(function()
 				if to_send["Client"][identifier] ~= nil or #_getIdentifier(identifier) <= 0 then
 					continue
 				end
-				task.spawn(function()
-					if IsExist(identifier) and _findIdentifier(identifier) then
-						to_send["Client"][identifier] = packages
-						__Cindex += 1
+				if IsExist(identifier) and _findIdentifier(identifier) then
+					-- encode
+					if _enableEncoding then
+						debug.profilebegin("encode")
+						if identifier and typeof(packages) == "table" and #packages > 0 then
+							for i, datas in packages do
+								if typeof(datas) == "table" then
+									for index, _d in datas do
+										packages[i][index] = Driver.enc(useb64 or false, _d)
+									end
+								else
+									packages[i] = Driver.enc(useb64 or false, datas)
+								end
+							end
+						end
+						debug.profileend()
 					end
-					_wipeIdentifier(identifier)
-				end)
+					to_send["Client"][identifier] = packages
+					__Cindex += 1
+				end
+				_wipeIdentifier(identifier)
 			elseif IsServer then -- is server
 				if __reach_s_max then
 					continue
