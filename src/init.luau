@@ -2,6 +2,19 @@
 
 -- FastNet2 (copyright @Eternity_Devs under MIT License)
 -- v0.0.8-pre-alpha (refresh)
+--[[
+>>> Design Order (Internal Process)
+	-> Begin process "reDo" connections availables (with task.spawn for directed to next order)
+	-> Begin process "onHold" connections availables (with task.spawn for directed to next order)
+	-> Begin process "encoding" packets data connections availables
+	-> Begin process "main connections order"
+		|-> Begin process "process packing connections ordered" availables
+		|-> Begin process "repack to single-pack"
+		|-> Begin process "sent packed"
+	-> Close and clear all cache/used tables
+<<<
+]]--
+
 assert(
 	script:IsDescendantOf(game:GetService("ReplicatedStorage")),
 	"Please place the FastNet2 module into ReplicatedStorage."
