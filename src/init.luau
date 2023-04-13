@@ -250,10 +250,7 @@ function __getProvider(toBool: boolean?): any
 end
 
 function IsExist(remoteName: string): boolean
-	if __nets[remoteName] then
-		return true
-	end
-	return false
+	return __nets[remoteName] and true or false
 end
 
 function randNum(min: number, max: number, new: boolean?): number
@@ -267,28 +264,28 @@ function _createId(length: number | nil): string -- faster than UUID
 	if length ~= nil and tonumber(length) == nil then
 		return table.concat({
 			randNum(11, 999, true),
-			string.char(randNum(97, 122)),
-			string.char(randNum(97, 122)),
-			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122, true)),
 			randNum(11, 999, true),
-			string.char(randNum(97, 122)),
-			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122, true)),
 			randNum(11, 65535, true),
-			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122, true)),
 			randNum(1, 65535, true),
 		})
 	end
 	if length == nil or length < 5 or length > 16 then
 		return table.concat({
 			randNum(11, 999, true),
-			string.char(randNum(97, 122)),
-			string.char(randNum(97, 122)),
-			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122, true)),
 			randNum(11, 999, true),
-			string.char(randNum(97, 122)),
-			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122, true)),
 			randNum(11, 65535, true),
-			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122, true)),
 			randNum(1, 65535, true),
 		})
 	else
@@ -369,11 +366,11 @@ function FastNet2.CreateUUID(): string
 	return Driver.CreateUUID()
 end
 
-function FastNet2.randStr(length: number | nil): string
+function FastNet2.randStr(length: number?): string
 	return _createId(length)
 end
 
-function FastNet2.randNum(min: number, max: number, NewInt: boolean | nil): number
+function FastNet2.randNum(min: number, max: number, NewInt: boolean?): number
 	return randNum(min, max, NewInt)
 end
 
@@ -452,7 +449,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		end
 		repeat
 			task.wait()
-		until _on == false
+		until _on == false and _findIdentifier(remoteName)
 		_signals[remoteName]["_signal" .. this] = nil
 		return (val - _now)
 	end
@@ -611,7 +608,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 						table.insert(_currentIdentifier, { _makeId, tosend })
 					end)
 					while not finish do
-						if (tick() - _t) >= timeout then
+						if _findIdentifier(remoteName) == false or (tick() - _t) >= timeout then
 							finish = true
 							task.cancel(_yield)
 							break
@@ -629,10 +626,11 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	else
 		table.clear(__new)
 		task.spawn(function()
-			if __nets and __nets[remoteName] then
-				Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: CRITICAL -> %s corrupted?", remoteName), 3)
+			if _findIdentifier(remoteName) then
+				Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unexpected spesific type to %s", remoteName), 3)
+				_removeIdentifier(remoteName)
 			else
-				Debug.__direct_debug(1 ~= 1, "[FastNet2]: CRITICAL -> Unknown error", 2)
+				Debug.__direct_debug(1 ~= 1, "[FastNet2]: Unexpected spesific type, unable to create", 2)
 			end
 		end)
 		return table.freeze({})
@@ -715,7 +713,6 @@ if IsServer then
 						and __callbacks[identifier]["func"] ~= nil
 					then
 						local to_returns_invoke: any = {} -- middleware
-						local index_invokes: number = 0
 						for index, data in v do
 							if __callbacks[identifier] ~= nil then
 								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
@@ -1170,7 +1167,7 @@ RunService.PostSimulation:Connect(function()
 					continue
 				end
 				task.spawn(function()
-					if IsExist(identifier) then
+					if IsExist(identifier) and _findIdentifier(identifier) then
 						to_send["Client"][identifier] = packages
 						__Cindex += 1
 					end
@@ -1184,7 +1181,7 @@ RunService.PostSimulation:Connect(function()
 					continue
 				end
 				task.spawn(function()
-					if IsExist(identifier) then
+					if IsExist(identifier) and _findIdentifier(identifier) then
 						to_send["Server"][identifier] = packages
 						__Sindex += 1
 					end
@@ -1240,9 +1237,9 @@ RunService.PostSimulation:Connect(function()
 								-- _convert[identifier] = _data
 								if player and waitPlr and PlayerStatus[player.Name] == true then
 									_NetEvent:FireClient(player, { [identifier] = _data })
-								elseif not waitPlr then
+								elseif player and not waitPlr then
 									_NetEvent:FireClient(player, { [identifier] = _data })
-								else
+								elseif player then
 									if not _onHold[player.Name] then
 										_onHold[player.Name] = {}
 									end
