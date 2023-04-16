@@ -24,10 +24,11 @@ assert(
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
-FastNet2.build = 8
+FastNet2.build = 8.1
 
 local __load_s: any = tick()
 --// Settings
+local CHECK_VERSION = true -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
 local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
 local _maxRate_perEvent: number = 500 -- default: 500
 local __threads: number = 50 -- default: 50
@@ -240,6 +241,19 @@ function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
 	if __threads < 25 or __threads > 100 then
 		__threads = 25
 	end
+	task.spawn(function()
+		if CHECK_VERSION and IsServer then
+			local HttpService = game:GetService("HttpService")
+			local success, ver = pcall(function()
+				return HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
+			end)
+			if success then
+				Debug.__direct_debug(FastNet2.build >= tonumber(ver), string.format("[FastNet2]: New version available (new: %s | current: %s)", tostring(ver), tostring(FastNet2.build)), 1)
+			else
+				Debug.__direct_debug(success, string.format("[FastNet2]: Failed to check latest version (:%s)", ver), 2)
+			end
+		end
+	end)
 	return LevelModes[__currentMode]
 end
 function __getProvider(toBool: boolean?): any
@@ -387,6 +401,10 @@ end
 
 function FastNet2.Nearest(player: Player, radiusDist: any, customCharacter: boolean?): { Player }
 	return Driver.Nearest(player, radiusDist, customCharacter)
+end
+
+function FastNet2.nearest(player: Player, radiusDist: any, customCharacter: boolean?): { Player }
+	return FastNet2.Nearest(player, radiusDist, customCharacter)
 end
 
 function FastNet2.Wait(): number
@@ -748,8 +766,8 @@ if IsServer then
 									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									-- 	end
 									-- end
-									if __callbacks[identifier] ~= nil and _enableEncoding then
-										if typeof(data) == "table" then
+									if __callbacks[identifier] ~= nil then
+										if _enableEncoding and typeof(data) == "table" then
 											for indexs, to_encode in data do
 												data[indexs] = Driver.dec(useb64 or false, to_encode)
 											end
@@ -778,11 +796,9 @@ if IsServer then
 												and __callbacks[identifier] ~= nil
 												and __callbacks[identifier]["func"] ~= nil
 											then
-												if _enableEncoding then
-													if typeof(datas) == "table" then
-														for indexs, to_encode in datas do
-															datas[indexs] = Driver.dec(useb64 or false, to_encode)
-														end
+												if _enableEncoding and typeof(datas) == "table" then
+													for indexs, to_encode in datas do
+														datas[indexs] = Driver.dec(useb64 or false, to_encode)
 													end
 												end
 												Threads(__callbacks[identifier]["func"], plr, table.unpack(datas or {}))
@@ -837,8 +853,8 @@ if IsServer then
 									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
 									-- 	end
 									-- end
-									if __callbacks[identifier] ~= nil and _enableEncoding then
-										if typeof(data) == "table" then
+									if __callbacks[identifier] ~= nil then
+										if _enableEncoding and typeof(data) == "table" then
 											for indexs, to_encode in data do
 												data[indexs] = Driver.dec(useb64 or false, to_encode)
 											end
@@ -1154,7 +1170,7 @@ RunService.PostSimulation:Connect(function()
 				if IsExist(identifier) and _findIdentifier(identifier) then
 					-- encode
 					if _enableEncoding then
-						debug.profilebegin("encode")
+						debug.profilebegin("encode_"..identifier)
 						if identifier and typeof(packages) == "table" and #packages > 0 then
 							for i, datas in packages do
 								if typeof(datas) == "table" then
