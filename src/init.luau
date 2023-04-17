@@ -24,49 +24,50 @@ assert(
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
-FastNet2.build = 8.1
+FastNet2.build = 8.2
+-- Internal Settings
+FastNet2.Settings = {
+	["CHECK_VERSION"] = true, -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
+	["_enableLimitingRate"] = false, -- default: true, off it if want pure or for benchmarking
+	["_maxRate_perEvent"] = 500, -- default: 500
+	["__threads"] = 50, -- default: 50
+	["__currentMode"] = 2, -- default: 2 (1-3)
+	["_enableEncoding"] = false, -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
+	["smooth_mode"] = 2, -- default: 2, Modes: 1 (Low 30), 2 (Default 60), 3 (High 90), 4 (Ultra 120) [LOCK-FRAME, NOT REALLY AFFECT TO PERFORMANCE]
+	["useb64"] = false, -- default: false, if it false it will use binary instead else base64 for encode
+	["waitPlr"] = false, -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
+}
 
 local __load_s: any = tick()
---// Settings
-local CHECK_VERSION = true -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
-local _enableLimitingRate: boolean = false -- default: true, off it if want pure or for benchmarking
-local _maxRate_perEvent: number = 500 -- default: 500
-local __threads: number = 50 -- default: 50
-local __currentMode: number = 2
-local _enableEncoding: boolean = false -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
-local smooth_mode: number = 2 -- default: 2, Modes: 1 (Low 30), 2 (Default 60), 3 (High 90), 4 (Ultra 120)
-local useb64: boolean = false -- default: false, if it false it will use binary instead else base64 for encode
-local waitPlr: boolean = false -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
---// End Settings
 
-if typeof(_enableLimitingRate) ~= "boolean" then
-	_enableLimitingRate = true
+if typeof(FastNet2.Settings._enableLimitingRate) ~= "boolean" then
+	FastNet2.Settings._enableLimitingRate = true
 end
-if typeof(_enableEncoding) ~= "boolean" then
-	_enableEncoding = false
+if typeof(FastNet2.Settings._enableEncoding) ~= "boolean" then
+	FastNet2.Settings._enableEncoding = false
 end
-if typeof(useb64) ~= "boolean" then
-	useb64 = false
+if typeof(FastNet2.Settings.useb64) ~= "boolean" then
+	FastNet2.Settings.useb64 = false
 end
 
-if smooth_mode == 1 then
-	smooth_mode = (1 / 30 - 0.00015)
-elseif smooth_mode == 2 then
-	smooth_mode = (1 / 60 - 0.00015)
-elseif smooth_mode == 3 then
-	smooth_mode = (1 / 90 - 0.00015)
-elseif smooth_mode == 4 then
-	smooth_mode = (1 / 120 - 0.00015)
+if FastNet2.Settings.smooth_mode == 1 then
+	FastNet2.Settings.smooth_mode = (1 / 30 - 0.00015)
+elseif FastNet2.Settings.smooth_mode == 2 then
+	FastNet2.Settings.smooth_mode = (1 / 60 - 0.00015)
+elseif FastNet2.Settings.smooth_mode == 3 then
+	FastNet2.Settings.smooth_mode = (1 / 90 - 0.00015)
+elseif FastNet2.Settings.smooth_mode == 4 then
+	FastNet2.Settings.smooth_mode = (1 / 120 - 0.00015)
 else
-	smooth_mode = (1 / 60 - 0.00015) -- to normal
+	FastNet2.Settings.smooth_mode = (1 / 60 - 0.00015) -- to normal
 end
 
-if _maxRate_perEvent ~= nil then
-	if _maxRate_perEvent < 1 or _maxRate_perEvent >= math.huge then
-		_maxRate_perEvent = 500
+if FastNet2.Settings._maxRate_perEvent ~= nil then
+	if FastNet2.Settings._maxRate_perEvent < 1 or FastNet2.Settings._maxRate_perEvent >= math.huge then
+		FastNet2.Settings._maxRate_perEvent = 500
 	end
 else
-	_maxRate_perEvent = 500
+	FastNet2.Settings._maxRate_perEvent = 500
 end
 
 type Tany = { [any]: any }
@@ -88,8 +89,8 @@ local LevelModes: Tany = {
 	[3] = "High",
 }
 
-if __threads < 25 or __threads > 100 then
-	__threads = 25
+if FastNet2.Settings.__threads < 25 or FastNet2.Settings.__threads > 100 then
+	FastNet2.Settings.__threads = 25
 end
 
 --// Services
@@ -105,8 +106,8 @@ local Debug: any = require(script:WaitForChild("Debug"))
 local Threads: any = require(script:WaitForChild("Thread"))
 local Driver: any = require(script:WaitForChild("Driver"))
 
-if _enableEncoding then
-	Debug.__direct_debug(_enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
+if FastNet2.Settings._enableEncoding then
+	Debug.__direct_debug(FastNet2.Settings._enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
 end
 
 local Nets: any
@@ -129,7 +130,7 @@ if IsClient then
 end
 
 local PlayerStatus: Tany = {} -- players status for holding connection feature method (experimental)
-if IsServer and waitPlr then
+if IsServer and FastNet2.Settings.waitPlr then
 	Players.PlayerAdded:Connect(function(player)
 		if player then
 			if not PlayerStatus[player.Name] then
@@ -215,7 +216,7 @@ if IsServer and waitPlr then
 end
 
 --// Internal Functions
-function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
+function reConfigure(): string -- EXPERIMENTAL FEATURE
 	Debug.__direct_debug(
 		initialized == false,
 		"[FastNet2]: couldn't re-configure internal system settings [Already set].",
@@ -223,38 +224,43 @@ function reConfigure(level: number?): string -- EXPERIMENTAL FEATURE
 	)
 	if not initialized then
 		initialized = true
-		if level ~= nil and typeof(level) == "number" then
-			__currentMode = level
+		if not LevelModes[FastNet2.Settings.__currentMode] then
+			FastNet2.Settings.__currentMode = 2
 		end
-		if not LevelModes[__currentMode] then
-			__currentMode = 2
-		end
-		if __currentMode == 3 then
-			__threads = 100
-		elseif __currentMode == 2 then
-			__threads = 50
+		if FastNet2.Settings.__currentMode == 3 then
+			FastNet2.Settings.__threads = 100
+		elseif FastNet2.Settings.__currentMode == 2 then
+			FastNet2.Settings.__threads = 50
 		else
-			__threads = 25
+			FastNet2.Settings.__threads = 25
 		end
-		Threads = Threads.__start(__threads)
+		Threads = Threads.__start(FastNet2.Settings.__threads)
 	end
-	if __threads < 25 or __threads > 100 then
-		__threads = 25
+	if FastNet2.Settings.__threads < 25 or FastNet2.Settings.__threads > 100 then
+		FastNet2.Settings.__threads = 25
 	end
 	task.spawn(function()
-		if CHECK_VERSION and IsServer then
+		if FastNet2.Settings.CHECK_VERSION and IsServer then
 			local HttpService = game:GetService("HttpService")
 			local success, ver = pcall(function()
 				return HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
 			end)
 			if success then
-				Debug.__direct_debug(FastNet2.build >= tonumber(ver), string.format("[FastNet2]: New version available (new: %s | current: %s)", tostring(ver), tostring(FastNet2.build)), 1)
+				Debug.__direct_debug(
+					FastNet2.build >= tonumber(ver),
+					string.format(
+						"[FastNet2]: New version available (new: %s | current: %s)",
+						tostring(ver),
+						tostring(FastNet2.build)
+					),
+					1
+				)
 			else
 				Debug.__direct_debug(success, string.format("[FastNet2]: Failed to check latest version (:%s)", ver), 2)
 			end
 		end
 	end)
-	return LevelModes[__currentMode]
+	return LevelModes[FastNet2.Settings.__currentMode]
 end
 function __getProvider(toBool: boolean?): any
 	if typeof(toBool) == "boolean" and toBool == true then
@@ -394,7 +400,7 @@ end
 
 function FastNet2.fps(convert: boolean?)
 	if convert then
-		return (1/RunService.Heartbeat:Wait())
+		return (1 / RunService.Heartbeat:Wait())
 	end
 	return RunService.Heartbeat:Wait()
 end
@@ -414,7 +420,7 @@ function FastNet2.Wait(): number
 	PostSimulation is 1/60 or print(RunService.PostSimulation:Wait())
 	]]
 	--
-	return RunService.PostSimulation:Wait() -- 60 frame / 0.0166s / 16.66ms
+	return RunService.PostSimulation:Wait()
 end
 function FastNet2.wait(): number
 	return FastNet2.Wait()
@@ -435,6 +441,7 @@ end
 function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
 	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2)
+	remoteName = Driver.enc(true, remoteName)
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
@@ -459,19 +466,19 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	_createSignal(remoteName)
 	_createIdentifier(remoteName)
 	local __new: Tany = {}
-	local __disconnected = false
+	__new.__disconnected = false
 	-- functions
 	function __new:Wait(): number -- EXPERIMENTAL
-		local _now, this = tick(), _createId()
+		local _now, this = os.clock(), _createId()
 		local val, _on = 0, true
 		_signals[remoteName]["_signal" .. this] = function()
-			val = tick()
+			val = os.clock()
 			_on = false
+			_signals[remoteName]["_signal" .. this] = nil
 		end
 		repeat
 			task.wait()
 		until _on == false and _findIdentifier(remoteName)
-		_signals[remoteName]["_signal" .. this] = nil
 		return (val - _now)
 	end
 	function __new:wait(): number
@@ -479,12 +486,12 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	end
 	function __new:Listen(waitTill: boolean | any, callback: any): Tany
 		if typeof(waitTill) == "boolean" and waitTill == true then
-			if __disconnected then
-				__disconnected = false
+			if __new.__disconnected then
+				__new.__disconnected = false
 			end
 			repeat
 				task.wait()
-			until __disconnected == false and IsExist(remoteName) == true
+			until __new.__disconnected == false and IsExist(remoteName) == true
 			__callbacks[remoteName] = {
 				func = callback or nil,
 			}
@@ -514,17 +521,9 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	end
 	if __nets and __nets[remoteName] and __nets[remoteName]._type == "re" then
 		function __new:Disconnect(message: string?)
-			if __new and __callbacks[remoteName] ~= nil and __disconnected == false then
-				if __callbacks[remoteName]["_once"] ~= nil then
-					Debug.__direct_debug(
-						__callbacks[remoteName]["_once"] == true,
-						"[FastNet2]: Couldn't disconnect due :Once still on, try again.",
-						3,
-						2
-					)
-				end
+			if __new and __callbacks[remoteName] ~= nil and not __new.__disconnected then
+				__new.__disconnected = true
 				__callbacks[remoteName] = nil
-				__disconnected = true
 				if message and typeof(message) == "string" and message:len() > 0 then
 					Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
 				end
@@ -550,18 +549,15 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			function __new:Fire(...: any)
 				local _currentIdentifier: Tany = _toSend[remoteName]
 				if IsExist(remoteName) and _currentIdentifier then
-					if _enableLimitingRate and #_currentIdentifier > (_maxRate_perEvent or 500) then -- rate limit for client only
+					if
+						FastNet2.Settings._enableLimitingRate
+						and #_currentIdentifier > (FastNet2.Settings._maxRate_perEvent or 500)
+					then -- rate limit for client only
 						return -- reject
 					end
 					table.insert(_currentIdentifier, { ... })
 				end
 			end
-		end
-		function __new:Disconnected(): boolean
-			return __disconnected
-		end
-		function __new:disconnected(): boolean
-			return self:Disconnected()
 		end
 	elseif __nets and __nets[remoteName] and __nets[remoteName]._type == "rf" then
 		if IsServer then
@@ -661,7 +657,8 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		if __nets[remoteName] ~= nil then
 			__nets[remoteName] = nil
 			__callbacks[remoteName] = nil
-			__disconnected = true
+			_signals[remoteName] = nil
+			__new.__disconnected = true
 			_removeIdentifier(remoteName)
 		end
 	end
@@ -672,13 +669,14 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 end
 
 function FastNet2:get(remoteName: string, waitFor: number?): Tany
-	return self:Get(remoteName, waitFor or 5)
+	return self:Get(Driver.enc(true, remoteName), waitFor or 5)
 end
 
 function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
 	Debug.__direct_debug(typeof(typeRemote) == "string", "[FastNet2]: Invalid type of remote", 3, 2)
-	if not IsExist(remoteName) then
+	local enc_name = Driver.enc(true, remoteName)
+	if not IsExist(enc_name) then
 		if typeof(typeRemote) == "string" then
 			typeRemote = typeRemote:lower()
 			if
@@ -690,9 +688,9 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 				or typeRemote == "remote"
 				or typeRemote == "remotes"
 			then
-				__nets[remoteName] = {
+				__nets[enc_name] = {
 					_type = "re",
-					name = remoteName,
+					name = enc_name,
 				}
 			elseif
 				typeRemote == "invoke"
@@ -703,9 +701,9 @@ function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 				or typeRemote == "remotefunctions"
 				or typeRemote == "rf"
 			then
-				__nets[remoteName] = {
+				__nets[enc_name] = {
 					_type = "rf",
-					name = remoteName,
+					name = enc_name,
 				}
 				-- Debug.__direct_debug(1 ~= 1, "[FastNet2]: RemoteFunction features is currently not available.", 2)
 			end
@@ -767,9 +765,9 @@ if IsServer then
 									-- 	end
 									-- end
 									if __callbacks[identifier] ~= nil then
-										if _enableEncoding and typeof(data) == "table" then
+										if FastNet2.Settings._enableEncoding and typeof(data) == "table" then
 											for indexs, to_encode in data do
-												data[indexs] = Driver.dec(useb64 or false, to_encode)
+												data[indexs] = Driver.dec(FastNet2.Settings.useb64 or false, to_encode)
 											end
 										end
 										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
@@ -796,9 +794,10 @@ if IsServer then
 												and __callbacks[identifier] ~= nil
 												and __callbacks[identifier]["func"] ~= nil
 											then
-												if _enableEncoding and typeof(datas) == "table" then
+												if FastNet2.Settings._enableEncoding and typeof(datas) == "table" then
 													for indexs, to_encode in datas do
-														datas[indexs] = Driver.dec(useb64 or false, to_encode)
+														datas[indexs] =
+															Driver.dec(FastNet2.Settings.useb64 or false, to_encode)
 													end
 												end
 												Threads(__callbacks[identifier]["func"], plr, table.unpack(datas or {}))
@@ -813,14 +812,16 @@ if IsServer then
 											and datas ~= nil
 										then
 											local _cb = { datas }
-											if _enableEncoding then
+											if FastNet2.Settings._enableEncoding then
 												for indexs, to_encode in _cb do
 													if typeof(to_encode) == "table" then
 														for _i, x in to_encode do
-															_cb[indexs][_i] = Driver.dec(useb64 or false, x)
+															_cb[indexs][_i] =
+																Driver.dec(FastNet2.Settings.useb64 or false, x)
 														end
 													else
-														_cb[indexs] = Driver.dec(useb64 or false, to_encode)
+														_cb[indexs] =
+															Driver.dec(FastNet2.Settings.useb64 or false, to_encode)
 													end
 												end
 											end
@@ -854,9 +855,9 @@ if IsServer then
 									-- 	end
 									-- end
 									if __callbacks[identifier] ~= nil then
-										if _enableEncoding and typeof(data) == "table" then
+										if FastNet2.Settings._enableEncoding and typeof(data) == "table" then
 											for indexs, to_encode in data do
-												data[indexs] = Driver.dec(useb64 or false, to_encode)
+												data[indexs] = Driver.dec(FastNet2.Settings.useb64 or false, to_encode)
 											end
 										end
 										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
@@ -874,17 +875,17 @@ if IsServer then
 							table.insert(_toSend[identifier], { plr, to_returns_invoke })
 							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
-						task.spawn(function()
-							if _signals[identifier] then
-								debug.profilebegin("signal")
-								for i, _call in _signals[identifier] do
-									if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-										task.spawn(_call)
-									end
-								end
-								debug.profileend()
-							end
-						end)
+						--task.spawn(function()
+						--	if _signals[identifier] then
+						--		debug.profilebegin("signal")
+						--		for i, _call in _signals[identifier] do
+						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+						--				task.spawn(_call)
+						--			end
+						--		end
+						--		debug.profileend()
+						--	end
+						--end)
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
 					then
@@ -898,17 +899,17 @@ if IsServer then
 								Threads(_signals[identifier]["_invokeSignal" .. datas[1]], table.unpack(datas[2] or {}))
 							end
 						end
-						task.spawn(function()
-							if _signals[identifier] then
-								debug.profilebegin("signal")
-								for i, _call in _signals[identifier] do
-									if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-										task.spawn(_call)
-									end
-								end
-								debug.profileend()
-							end
-						end)
+						--task.spawn(function()
+						--	if _signals[identifier] then
+						--		debug.profilebegin("signal")
+						--		for i, _call in _signals[identifier] do
+						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+						--				task.spawn(_call)
+						--			end
+						--		end
+						--		debug.profileend()
+						--	end
+						--end)
 					end
 				end
 			end
@@ -977,17 +978,17 @@ elseif IsClient then
 							table.insert(_toSend[identifier], to_returns_invoke)
 							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
-						task.spawn(function()
-							if _signals[identifier] then
-								debug.profilebegin("signal")
-								for i, _call in _signals[identifier] do
-									if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-										task.spawn(_call)
-									end
-								end
-								debug.profileend()
-							end
-						end)
+						--task.spawn(function()
+						--	if _signals[identifier] then
+						--		debug.profilebegin("signal")
+						--		for i, _call in _signals[identifier] do
+						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+						--				task.spawn(_call)
+						--			end
+						--		end
+						--		debug.profileend()
+						--	end
+						--end)
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
 					then
@@ -1011,17 +1012,17 @@ elseif IsClient then
 								end
 							end
 						end
-						task.spawn(function()
-							if _signals[identifier] then
-								debug.profilebegin("signal")
-								for i, _call in _signals[identifier] do
-									if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-										task.spawn(_call)
-									end
-								end
-								debug.profileend()
-							end
-						end)
+						--task.spawn(function()
+						--	if _signals[identifier] then
+						--		debug.profilebegin("signal")
+						--		for i, _call in _signals[identifier] do
+						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+						--				task.spawn(_call)
+						--			end
+						--		end
+						--		debug.profileend()
+						--	end
+						--end)
 					end
 				end
 			end
@@ -1034,11 +1035,11 @@ end
 -- Internal Events Handler
 local __t = os.clock()
 RunService.PostSimulation:Connect(function()
-	if (os.clock() - __t) >= (smooth_mode or (1 / 60 - 0.00015)) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
+	if (os.clock() - __t) >= (FastNet2.Settings.smooth_mode or (1 / 60 - 0.00015)) then -- lock frame (prevention frame exploit) & so we don't skip any/1 frame, => 60 frames per second?
 		debug.profilebegin("FastNet2.Internal.process")
-		task.spawn(function()
-			debug.profilebegin("redo")
-			if IsClient then
+		if IsClient then
+			task.spawn(function()
+				debug.profilebegin("redo")
 				for identifier: string, _data in _reDo do
 					if typeof(identifier) == "string" and typeof(_data) == "table" and #_data > 0 then
 						_data = table.unpack(_data)
@@ -1086,26 +1087,26 @@ RunService.PostSimulation:Connect(function()
 									table.remove(_data, index)
 								end
 							end
-							task.spawn(function()
-								if _toSend[identifier] and #to_returns_invoke > 0 then
-									table.insert(_toSend[identifier], to_returns_invoke)
-								end
-								if _signals[identifier] then
-									for i, _call in _signals[identifier] do
-										if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-											task.spawn(_call)
-										end
-									end
-								end
-							end)
+							--task.spawn(function()
+							--	if _toSend[identifier] and #to_returns_invoke > 0 then
+							--		table.insert(_toSend[identifier], to_returns_invoke)
+							--	end
+							--	if _signals[identifier] then
+							--		for i, _call in _signals[identifier] do
+							--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
+							--				task.spawn(_call)
+							--			end
+							--		end
+							--	end
+							--end)
 						end
 					end
 				end
-			end
-			debug.profileend()
-		end)
-		task.spawn(function()
-			if IsServer and waitPlr then
+				debug.profileend()
+			end)
+		end
+		if IsServer and FastNet2.Settings.waitPlr then
+			task.spawn(function()
 				debug.profilebegin("hold")
 				for player: string, data in _onHold do
 					if #data == 0 then
@@ -1121,9 +1122,9 @@ RunService.PostSimulation:Connect(function()
 									and player
 									and Players[player]
 								then
-									if waitPlr and PlayerStatus[player] == true then
+									if FastNet2.Settings.waitPlr and PlayerStatus[player] == true then
 										_NetEvent:FireClient(Players[player], { [identifier] = _data })
-									elseif not waitPlr then
+									elseif not FastNet2.Settings.waitPlr then
 										_NetEvent:FireClient(Players[player], { [identifier] = _data })
 									end
 									table.remove(datas, index)
@@ -1133,8 +1134,8 @@ RunService.PostSimulation:Connect(function()
 					end
 				end
 				debug.profileend()
-			end
-		end)
+			end)
+		end
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
@@ -1169,16 +1170,16 @@ RunService.PostSimulation:Connect(function()
 				end
 				if IsExist(identifier) and _findIdentifier(identifier) then
 					-- encode
-					if _enableEncoding then
-						debug.profilebegin("encode_"..identifier)
+					if FastNet2.Settings._enableEncoding then
+						debug.profilebegin("encode_" .. identifier)
 						if identifier and typeof(packages) == "table" and #packages > 0 then
 							for i, datas in packages do
 								if typeof(datas) == "table" then
 									for index, _d in datas do
-										packages[i][index] = Driver.enc(useb64 or false, _d)
+										packages[i][index] = Driver.enc(FastNet2.Settings.useb64 or false, _d)
 									end
 								else
-									packages[i] = Driver.enc(useb64 or false, datas)
+									packages[i] = Driver.enc(FastNet2.Settings.useb64 or false, datas)
 								end
 							end
 						end
@@ -1186,8 +1187,13 @@ RunService.PostSimulation:Connect(function()
 					end
 					to_send["Client"][identifier] = packages
 					__Cindex += 1
+					_wipeIdentifier(identifier)
+					if _signals[identifier] then
+						for __, _s in _signals[identifier] do
+							Threads(_s)
+						end
+					end
 				end
-				_wipeIdentifier(identifier)
 			elseif IsServer then -- is server
 				if __reach_s_max then
 					continue
@@ -1224,6 +1230,11 @@ RunService.PostSimulation:Connect(function()
 								if to_send_to_client[identifier] and to_send_to_client[identifier][data[1]] then
 									table.insert(to_send_to_client[identifier][data[1]], data[2])
 									to_send_indexs += 1
+									if _signals[identifier] then
+										for __, _s in _signals[identifier] do
+											Threads(_s)
+										end
+									end
 								end
 							else
 								if not to_send_all_clients[identifier] then
@@ -1231,6 +1242,11 @@ RunService.PostSimulation:Connect(function()
 								end
 								table.insert(to_send_all_clients[identifier], data[2])
 								to_send_all_indexs += 1
+								if _signals[identifier] then
+									for __, _s in _signals[identifier] do
+										Threads(_s)
+									end
+								end
 							end
 						end
 					end
@@ -1250,21 +1266,23 @@ RunService.PostSimulation:Connect(function()
 							if player and _data then
 								-- local _convert = {}
 								-- _convert[identifier] = _data
-								if player and waitPlr and PlayerStatus[player.Name] == true then
-									_NetEvent:FireClient(player, { [identifier] = _data })
-								elseif player and not waitPlr then
-									_NetEvent:FireClient(player, { [identifier] = _data })
-								elseif player then
-									if not _onHold[player.Name] then
-										_onHold[player.Name] = {}
+								task.spawn(function()
+									if player and FastNet2.Settings.waitPlr and PlayerStatus[player.Name] == true then
+										_NetEvent:FireClient(player, { [identifier] = _data })
+									elseif player and not FastNet2.Settings.waitPlr then
+										_NetEvent:FireClient(player, { [identifier] = _data })
+									elseif player then
+										if not _onHold[player.Name] then
+											_onHold[player.Name] = {}
+										end
+										if _onHold[player.Name] and not _onHold[player.Name][identifier] then
+											_onHold[player.Name][identifier] = {}
+										end
+										if _onHold[player.Name] and _onHold[player.Name][identifier] then
+											table.insert(_onHold[player.Name][identifier], _data)
+										end
 									end
-									if _onHold[player.Name] and not _onHold[player.Name][identifier] then
-										_onHold[player.Name][identifier] = {}
-									end
-									if _onHold[player.Name] and _onHold[player.Name][identifier] then
-										table.insert(_onHold[player.Name][identifier], _data)
-									end
-								end
+								end)
 							end
 						end
 					end
@@ -1275,13 +1293,17 @@ RunService.PostSimulation:Connect(function()
 			_NetEvent:FireServer(to_send["Client"])
 		end
 		debug.profileend()
-		table.clear(to_send) -- prevent memory leaks?
-		__t = os.clock()
 		debug.profileend()
+		table.clear(to_send) -- prevent memory leaks?
+		__Cindex = nil
+		__Sindex = nil
+		__reach_c_max = nil
+		__reach_s_max = nil
+		__t = os.clock()
 	end
 end)
 
-reConfigure(__currentMode or 2)
+reConfigure()
 Debug.__direct_debug(
 	1 ~= 1,
 	string.format(
