@@ -129,48 +129,49 @@ function encodeTable(b64: boolean, data): any
 end
 function decodeTable(b64: boolean, data): any
 	for i, datas in data do
-		if typeof(datas) == "string" and datas:len() > 0 then
-			if b64 then
-				-- error handling
-				local x,y = pcall(function()
-					return base64.dec(datas)
-				end)
-				if not x then
-					data[i] = datas
-				else
-					data[i] = y
-				end
-			else
-				local index = 1
-				local str: any = ""
-				while index <= #datas do
-					local byteBinary = datas:sub(index, index + 7)
-					str ..= string.char(tonumber(byteBinary, 2))
-					index += 8
-				end
-				if tonumber(str) ~= nil then
-					data[i] = tonumber(str)
-				else
-					data[i] = str
-				end
-			end
-		elseif typeof(datas) == "table" then
-			if #datas == 0 then
-				continue
-			else
-				-- alternative check
-				local x: any = 0
-				for _i,n in datas do
-					x += 1
-					break
-				end
-				if x <= 0 then
-					x = nil
-					continue
-				end
-			end
-			data[i] = decodeTable(b64, datas)
-		end
+		data[i] = Driver.dec(b64, data[i])
+		-- if typeof(datas) == "string" and datas:len() > 0 then
+		-- 	if b64 then
+		-- 		-- error handling
+		-- 		local x,y = pcall(function()
+		-- 			return base64.dec(datas)
+		-- 		end)
+		-- 		if not x then
+		-- 			data[i] = datas
+		-- 		else
+		-- 			data[i] = y
+		-- 		end
+		-- 	else
+		-- 		local index = 1
+		-- 		local str: any = ""
+		-- 		while index <= #datas do
+		-- 			local byteBinary = datas:sub(index, index + 7)
+		-- 			str ..= string.char(tonumber(byteBinary, 2))
+		-- 			index += 8
+		-- 		end
+		-- 		if tonumber(str) ~= nil then
+		-- 			data[i] = tonumber(str)
+		-- 		else
+		-- 			data[i] = str
+		-- 		end
+		-- 	end
+		-- elseif typeof(datas) == "table" then
+		-- 	if #datas == 0 then
+		-- 		continue
+		-- 	else
+		-- 		-- alternative check
+		-- 		local x: any = 0
+		-- 		for _i,n in datas do
+		-- 			x += 1
+		-- 			break
+		-- 		end
+		-- 		if x <= 0 then
+		-- 			x = nil
+		-- 			continue
+		-- 		end
+		-- 	end
+		-- 	data[i] = decodeTable(b64, datas)
+		-- end
 	end
 	return data
 end
