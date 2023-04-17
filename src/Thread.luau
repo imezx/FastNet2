@@ -25,51 +25,44 @@ SOFTWARE.
 --!strict
 local ThreadPool = {}
 local threadIndex: number = 0
-local function passer(toRun, ...)
-	toRun(...)
-end
 
 function ThreadPool.__start(indexs: number) -- How many threads to pre-allocate
 	debug.profilebegin("FastNet2.thread.create")
 	threadIndex = indexs
 	local threads = table.create(threadIndex)
-
+	local function passer(toRun, ...)
+		toRun(...)
+	end
 	local function runner(thread: thread): never
 		while true do
 			-- Run the function
 			passer(coroutine.yield())
-
 			-- Done, make this thread available
 			threadIndex += 1
 			threads[threadIndex] = thread
 		end
 	end
-
 	for i = 1, threadIndex do
 		local thread = coroutine.create(runner)
 		coroutine.resume(thread, thread)
 		threads[i] = thread
 	end
 	debug.profileend()
-
 	return function<_, params>(func: (params) -> (), ...: params): (thread)
 		-- Xthread 1.0 Feature (free brute-threading)
 		if threadIndex < 25 or threadIndex <= 0 then
-			debug.profilebegin("FastNet2.thread.freeThread")
+			debug.profilebegin("FastNet2.thread.freeThreads")
 			threadIndex = 0
 			for i=1,5 do
 				local thread = coroutine.create(runner)
 				coroutine.resume(thread, thread)
-				threads[threadIndex+1] = thread
 				threadIndex += 1
+				threads[threadIndex] = thread
 			end
 			debug.profileend()
 		end
 		if threadIndex ~= 0 then
-			-- Thread available
 			local thread = threads[threadIndex]
-
-			-- Remove as available
 			threads[threadIndex] = nil
 			threadIndex -= 1
 
@@ -77,7 +70,6 @@ function ThreadPool.__start(indexs: number) -- How many threads to pre-allocate
 		else
 			local thread = coroutine.create(runner)
 			coroutine.resume(thread, thread)
-
 			return task.spawn(thread, func, ...)
 		end
 	end
