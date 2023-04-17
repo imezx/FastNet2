@@ -21,22 +21,23 @@ https://wally.run/package/imezx/fastnet2
 # FastNet2.down(): number
 # FastNet2.Wait(): number
 
-# * FastNet2 - Functions
+# * FastNet2 - RFunctions
 
+# * FastNet2 - REvents
 # FastNet2Remote:Listen(waitTill: boolean | any, callback: any): never
 -> Connect/Listen to the remote connection receiver
 # FastNet2Remote:Disconenct(messageOutput: string): undefined
 -> Disconenct currently connected remote, messageOutput print-out when disconnected
 # FastNet2Remote:Destroy()
 -> Destroy & Disconnect the remote
-# FastNet2Remote:Disconnected()
--> Check if the Remote is disconencted
+# FastNet2Remote:Wait(): number
+-> Wait till next remote packet is going fire or fired
 
 - Server
-# FastNet2Remote:Fire(player: Player, ...: any)
+# FastNet2Remote:Pull(player: Player, ...: any) -- RFunction
+# FastNet2Remote:Fire(player: Player, ...: any) -- REvents
 Note: Server currently incompleted
-# FastNet2Remote:Wait(): number
 
 - Client
-# FastNet2Remote:Fire(...: any)
-# FastNet2Remote:Wait(): number
+# FastNet2Remote:Pull(...: any) -- RFunction
+# FastNet2Remote:Fire(...: any) -- REvents
