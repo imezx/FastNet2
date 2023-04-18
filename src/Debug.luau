@@ -1,6 +1,5 @@
 --!strict
-local RunService = game:GetService("RunService")
-local _ableDebug:boolean = true
+local silentDebug: boolean = true
 local debugsCache: any = {}
 local levels: any = {
 	[1] = print,
@@ -8,52 +7,24 @@ local levels: any = {
 	[3] = error,
 }
 
-local _p = tick()
-local ranges = 0
-RunService.PostSimulation:Connect(function()
-	if (tick() - _p) >= 1 then
-		debug.profilebegin("FastNet2.debug")
-		ranges = 0
-		for i,v in debugsCache do
-			ranges += 1
-		end
-		if ranges > 500 then
-			debug.profilebegin("wipe")
-			table.clear(debugsCache)
-			debug.profileend()
-		end
-		debug.profileend()
-		_p = tick()
-	end
-end)
-
-function set_debug(x : boolean)
+function _gosilent(x : boolean)
 	if typeof(x) == "boolean" then
-		_ableDebug = x
+		silentDebug = x
 	end
 end
 
-function get_debugs_inrange(range: number): any
-	if not _ableDebug then
-		if range == nil or typeof(range) ~= "number" then
-			range = 100
-		elseif typeof(range) == "number" and range > 500 then
-			range = 100
+function get_log(sName: string?): any
+	if silentDebug then
+		if sName and typeof(sName) == "string" then
+			return debugsCache[sName] or {}
 		end
-		local toReturn = {}
-		for i,v in debugsCache do
-			if #toReturn >= range then
-				break
-			end
-			table.insert(toReturn, v)
-		end
-		return toReturn
+		return debugsCache
 	end
 	return {}
 end
 
-function direct_debug(c: any, m: string, l: number, l2: number?): boolean
-	if _ableDebug then
+function direct_debug(c: any, m: string, l: number, l2: number?, l3: string?): boolean
+	if not silentDebug then
 		local lv: any = l or 2
 		lv = levels[lv] or levels[2]
 		if lv == 3 then
@@ -62,13 +33,23 @@ function direct_debug(c: any, m: string, l: number, l2: number?): boolean
 			if not (c) then lv(m) elseif (c) == false then lv(m) end
 		end
 	else
-		table.insert(debugsCache, {c, m, l, l2})
+		if typeof(l3) ~= "string" then
+			if not debugsCache["INTERNAL"] then
+				debugsCache["INTERNAL"] = {}
+			end
+			table.insert(debugsCache["INTERNAL"], m)
+		elseif l3 and tostring(l3):len() > 0 then
+			if not debugsCache[l3] then
+				debugsCache[l3] = {}
+			end
+			table.insert(debugsCache[l3], m)
+		end
 	end
 	return (c)
 end
 
-return {
+return table.freeze({
 	__direct_debug = direct_debug,
-	set_debug = set_debug,
-	get_debugs_inrange = get_debugs_inrange
-}
+	silentDebug = _gosilent,
+	get_log = get_log
+})
