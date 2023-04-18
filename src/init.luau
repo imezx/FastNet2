@@ -24,7 +24,7 @@ assert(
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
-FastNet2.build = 8.2
+FastNet2.build = 8.3
 -- Internal Settings
 FastNet2.Settings = {
 	["CHECK_VERSION"] = true, -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
@@ -36,10 +36,14 @@ FastNet2.Settings = {
 	["smooth_mode"] = 2, -- default: 2, Modes: 1 (Low 30), 2 (Default 60), 3 (High 90), 4 (Ultra 120) [LOCK-FRAME, NOT REALLY AFFECT TO PERFORMANCE]
 	["useb64"] = false, -- default: false, if it false it will use binary instead else base64 for encode
 	["waitPlr"] = false, -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
+	["SILENT_DEBUG"] = true, -- default: false, set debug logs being silent [NOT AFFECT TO CLIENT]
 }
 
 local __load_s: any = tick()
 
+if typeof(FastNet2.Settings.SILENT_DEBUG) ~= "boolean" then
+	FastNet2.Settings.SILENT_DEBUG = false
+end
 if typeof(FastNet2.Settings._enableLimitingRate) ~= "boolean" then
 	FastNet2.Settings._enableLimitingRate = true
 end
@@ -106,6 +110,13 @@ local Debug: any = require(script:WaitForChild("Debug"))
 local Threads: any = require(script:WaitForChild("Thread"))
 local Driver: any = require(script:WaitForChild("Driver"))
 
+if IsClient then
+	Debug.silentDebug(false)
+else
+	if FastNet2.Settings.SILENT_DEBUG == true then
+		Debug.silentDebug(true)
+	end
+end
 if FastNet2.Settings._enableEncoding then
 	Debug.__direct_debug(FastNet2.Settings._enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
 end
@@ -123,10 +134,6 @@ if not Nets:FindFirstChild("Event") then
 	_NetEvent.Name = "Event"
 else
 	_NetEvent = Nets:WaitForChild("Event")
-end
-
-if IsClient then
-	Debug.set_debug(false)
 end
 
 local PlayerStatus: Tany = {} -- players status for holding connection feature method (experimental)
@@ -355,7 +362,9 @@ function _createSignal(remoteName: string)
 	Debug.__direct_debug(
 		__nets[remoteName] ~= nil,
 		"[FastNet2]: Couldn't create signal, Spesific remote not exists.",
-		2
+		2,
+		nil,
+		Driver.dec(true, remoteName)
 	)
 	if __nets[remoteName] and _signals[remoteName] == nil then
 		_signals[remoteName] = {}
@@ -373,13 +382,8 @@ end
 --	return table.freeze(FastNet2)
 --end
 
-function FastNet2._setdebug(On: boolean)
-	Debug.__direct_debug(typeof(On) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
-	Debug.set_debug(On or true)
-end
-
-function FastNet2.getdebugcache(maxrange: number): Tany
-	return Debug.get_debugs_inrange(maxrange or 100)
+function FastNet2.getdebugcaches(): Tany
+	return Debug.get_log()
 end
 
 function FastNet2.CreateUUID(): string
@@ -434,14 +438,14 @@ function FastNet2.down(): number
 end
 
 function FastNet2:Exist(remoteName: string): boolean
-	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
-	return IsExist(remoteName)
+	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2, remoteName)
+	return IsExist(Driver.enc(FastNet2.Settings.useb64 or false, remoteName))
 end
 
 function FastNet2:Get(remoteName: string, waitFor: number?): Tany
-	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
-	remoteName = Driver.enc(true, remoteName)
-	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2)
+	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2, remoteName)
+	remoteName = Driver.enc(FastNet2.Settings.useb64 or false, remoteName)
+	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2, nil, Driver.dec(true, remoteName))
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
@@ -466,7 +470,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	_createSignal(remoteName)
 	_createIdentifier(remoteName)
 	local __new: Tany = {}
-	__new.__disconnected = false
+	local __disconnected = false
 	-- functions
 	function __new:Wait(): number -- EXPERIMENTAL
 		local _now, this = os.clock(), _createId()
@@ -486,12 +490,12 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	end
 	function __new:Listen(waitTill: boolean | any, callback: any): Tany
 		if typeof(waitTill) == "boolean" and waitTill == true then
-			if __new.__disconnected then
-				__new.__disconnected = false
+			if __disconnected then
+				__disconnected = false
 			end
 			repeat
 				task.wait()
-			until __new.__disconnected == false and IsExist(remoteName) == true
+			until __disconnected == false and IsExist(remoteName) == true
 			__callbacks[remoteName] = {
 				func = callback or nil,
 			}
@@ -519,19 +523,27 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	function __new:once(waitTill: boolean | any, callbacks: any)
 		self:Once(waitTill, callbacks)
 	end
-	if __nets and __nets[remoteName] and __nets[remoteName]._type == "re" then
-		function __new:Disconnect(message: string?)
-			if __new and __callbacks[remoteName] ~= nil and not __new.__disconnected then
-				__new.__disconnected = true
-				__callbacks[remoteName] = nil
-				if message and typeof(message) == "string" and message:len() > 0 then
-					Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
-				end
+	function __new:Disconnect(message: string?)
+		if __new and __disconnected == false then
+			__disconnected = true
+			__callbacks[remoteName] = nil
+			if message and typeof(message) == "string" and message:len() > 0 then
+				Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
 			end
+		else
+			Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(true, remoteName)), 2, nil, Driver.dec(true, remoteName))
 		end
-		function __new:disconnect(message: string?)
-			self:Disconnect(message)
-		end
+	end
+	function __new:disconnect(message: string?)
+		self:Disconnect(message)
+	end
+	function __new.Disconnected(): boolean
+		return __disconnected
+	end
+	function __new.logs()
+		return Debug.get_log(Driver.dec(true, remoteName))
+	end
+	if __nets and __nets[remoteName] and __nets[remoteName]._type == "re" then
 		if IsServer then
 			function __new:Fires(...: any)
 				local _currentIdentifier: Tany = _toSend[remoteName]
@@ -562,7 +574,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	elseif __nets and __nets[remoteName] and __nets[remoteName]._type == "rf" then
 		if IsServer then
 			function __new:Pull(player: Player, timeout: number, ...: any): any?
-				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2)
+				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2, nil, Driver.dec(true, remoteName))
 				local _currentIdentifier: Tany = _toSend[remoteName]
 				if IsExist(remoteName) and _currentIdentifier then
 					if not _signals[remoteName] then
@@ -596,6 +608,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 					_signals[remoteName]["_invokeSignal" .. _makeId] = nil
 					return toreturn
 				end
+				return nil
 			end
 			function __new:pull(player: Player, timeout: number, ...: any): any?
 				return self:Pull(player, timeout, ...)
@@ -658,7 +671,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			__nets[remoteName] = nil
 			__callbacks[remoteName] = nil
 			_signals[remoteName] = nil
-			__new.__disconnected = true
+			__disconnected = true
 			_removeIdentifier(remoteName)
 		end
 	end
@@ -669,14 +682,14 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 end
 
 function FastNet2:get(remoteName: string, waitFor: number?): Tany
-	return self:Get(Driver.enc(true, remoteName), waitFor or 5)
+	return self:Get(Driver.enc(FastNet2.Settings.useb64 or false, remoteName), waitFor or 5)
 end
 
 function FastNet2:Create(remoteName: string, typeRemote: string): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
 	Debug.__direct_debug(typeof(typeRemote) == "string", "[FastNet2]: Invalid type of remote", 3, 2)
-	local enc_name = Driver.enc(true, remoteName)
-	if not IsExist(enc_name) then
+	local enc_name = Driver.enc(FastNet2.Settings.useb64 or false, remoteName)
+	if enc_name and not IsExist(enc_name) then
 		if typeof(typeRemote) == "string" then
 			typeRemote = typeRemote:lower()
 			if
@@ -718,6 +731,10 @@ end
 
 debug.setmemorycategory("FastNet2")
 if IsServer then
+	function FastNet2._setdebug(silent: boolean)
+		Debug.__direct_debug(typeof(silent) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
+		Debug.silentDebug(silent)
+	end
 	_NetEvent.OnServerEvent:Connect(function(plr, pkg)
 		if pkg and typeof(pkg) == "table" then
 			debug.profilebegin("FastNet2.server")
@@ -864,6 +881,8 @@ if IsServer then
 									end
 								end
 								if
+									__callbacks[identifier]
+									and
 									__callbacks[identifier]["_once"] ~= nil
 									and __callbacks[identifier]["_once"] == true
 								then
@@ -967,6 +986,8 @@ elseif IsClient then
 									Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
 								end
 								if
+									__callbacks[identifier]
+									and
 									__callbacks[identifier]["_once"] ~= nil
 									and __callbacks[identifier]["_once"] == true
 								then
@@ -1079,6 +1100,8 @@ RunService.PostSimulation:Connect(function()
 										end
 									end
 									if
+										__callbacks[identifier]
+										and
 										__callbacks[identifier]["_once"] ~= nil
 										and __callbacks[identifier]["_once"] == true
 									then
