@@ -235,7 +235,7 @@ function Driver.enc(b64: boolean, data: any): any
 	return data
 end
 
-function Driver.dec(b64, data: any): any
+function Driver.dec(b64: boolean, data: any): any
 	if typeof(data) == "string" and data:len() > 0 then
 		if b64 then
 			-- error handling
