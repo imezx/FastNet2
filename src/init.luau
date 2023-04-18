@@ -440,8 +440,8 @@ end
 
 function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
-	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2)
 	remoteName = Driver.enc(true, remoteName)
+	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2)
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
