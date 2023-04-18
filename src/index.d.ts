@@ -1,12 +1,12 @@
 interface Debug {
-    set_debug(x : boolean): void
+    silentDebug(silent : boolean): void
     __direct_debug(c: any, m: string, l: number, l2: number | undefined): boolean
-    get_debugs_inrange(range: number): any
+    get_log(sName: string?): any
 }
 
 interface FastNet2 {
     // Debug.luau
-    set_debug(x : boolean): void
+    _setdebug(x : boolean): void
     __direct_debug(c: any, m: string, l: number, l2: number | undefined): boolean
     // init.luau
     IsExist(remoteName: string): boolean
@@ -19,6 +19,9 @@ interface FastNet2 {
     _setdebug(On: boolean)
     CreateUUID(): string
     randStr(length: number | undefined): string
+    fps(): number
+    Nearest(): any
+    getdebugcaches(): any
 }
 
 export default FastNet2
