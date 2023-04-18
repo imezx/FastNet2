@@ -364,7 +364,7 @@ function _createSignal(remoteName: string)
 		"[FastNet2]: Couldn't create signal, Spesific remote not exists.",
 		2,
 		nil,
-		Driver.dec(true, remoteName)
+		Driver.dec(FastNet2.Settings.useb64 or false, remoteName)
 	)
 	if __nets[remoteName] and _signals[remoteName] == nil then
 		_signals[remoteName] = {}
@@ -445,7 +445,7 @@ end
 function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2, remoteName)
 	remoteName = Driver.enc(FastNet2.Settings.useb64 or false, remoteName)
-	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2, nil, Driver.dec(true, remoteName))
+	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
@@ -531,7 +531,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 				Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
 			end
 		else
-			Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(true, remoteName)), 2, nil, Driver.dec(true, remoteName))
+			Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(FastNet2.Settings.useb64 or false, remoteName)), 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
 		end
 	end
 	function __new:disconnect(message: string?)
@@ -541,7 +541,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 		return __disconnected
 	end
 	function __new.logs()
-		return Debug.get_log(Driver.dec(true, remoteName))
+		return Debug.get_log(Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
 	end
 	if __nets and __nets[remoteName] and __nets[remoteName]._type == "re" then
 		if IsServer then
@@ -574,7 +574,7 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	elseif __nets and __nets[remoteName] and __nets[remoteName]._type == "rf" then
 		if IsServer then
 			function __new:Pull(player: Player, timeout: number, ...: any): any?
-				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2, nil, Driver.dec(true, remoteName))
+				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
 				local _currentIdentifier: Tany = _toSend[remoteName]
 				if IsExist(remoteName) and _currentIdentifier then
 					if not _signals[remoteName] then
