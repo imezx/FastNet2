@@ -6,12 +6,12 @@
 >>> Design Order (Internal Process)
 	-> Begin process "reDo" connections availables (with task.spawn for directed to next order)
 	-> Begin process "onHold" connections availables (with task.spawn for directed to next order)
-	-> Begin process "encoding" packets data connections availables
 	-> Begin process "main connections order"
 		|-> Begin process "process packing connections ordered" availables
-		|-> Begin process "repack to single-pack"
-		|-> Begin process "sent packed"
-	-> Close and clear all cache/used tables
+			|-> Begin process "encoding" packets data identifier
+		|-> Begin process "repack to single-packed"
+		|-> Sent
+	-> Clear all cache/used tables & Finish
 <<<
 ]]
 --
@@ -24,7 +24,8 @@ assert(
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
-FastNet2.build = 8.3
+FastNet2.build = 8.4
+FastNet2.production = "Dev"
 -- Internal Settings
 FastNet2.Settings = {
 	["CHECK_VERSION"] = true, -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
@@ -36,7 +37,7 @@ FastNet2.Settings = {
 	["smooth_mode"] = 2, -- default: 2, Modes: 1 (Low 30), 2 (Default 60), 3 (High 90), 4 (Ultra 120) [LOCK-FRAME, NOT REALLY AFFECT TO PERFORMANCE]
 	["useb64"] = false, -- default: false, if it false it will use binary instead else base64 for encode
 	["waitPlr"] = false, -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
-	["SILENT_DEBUG"] = true, -- default: false, set debug logs being silent [NOT AFFECT TO CLIENT]
+	["SILENT_DEBUG"] = false, -- default: false, set debug logs being silent [NOT AFFECT TO CLIENT]
 }
 
 local __load_s: any = tick()
@@ -110,6 +111,94 @@ local Debug: any = require(script:WaitForChild("Debug"))
 local Threads: any = require(script:WaitForChild("Thread"))
 local Driver: any = require(script:WaitForChild("Driver"))
 
+local PlayerStatus: Tany = {} -- players status for holding connection feature method (experimental)
+function _loadPlrStatus(player)
+	if player then
+		if not PlayerStatus[player.Name] then
+			PlayerStatus[player.Name] = false
+		end
+		player.CharacterAdded:Connect(function(character)
+			if
+				player
+				and character
+				and character:IsDescendantOf(game:GetService("Workspace"))
+				and character:FindFirstChild("Humanoid")
+			then
+				PlayerStatus[player.Name] = true
+			elseif player then
+				task.wait(2.5) -- wait for recheck
+				if
+					player
+					and character
+					and character:IsDescendantOf(game:GetService("Workspace"))
+					and character:FindFirstChild("Humanoid")
+				then
+					PlayerStatus[player.Name] = true
+				elseif player then
+					PlayerStatus[player.Name] = false
+				end
+			end
+			character:WaitForChild("Humanoid").Died:Connect(function()
+				if
+					player
+					and character
+					and character:IsDescendantOf(game:GetService("Workspace"))
+					and character:FindFirstChild("Humanoid")
+					and character:FindFirstChild("Humanoid").Health > 0
+				then
+					PlayerStatus[player.Name] = true
+				elseif player then
+					PlayerStatus[player.Name] = false
+				end
+			end)
+		end)
+		player.CharacterRemoving:Connect(function(character)
+			if
+				player
+				and character
+				and character:IsDescendantOf(game:GetService("Workspace"))
+				and character:FindFirstChild("Humanoid")
+				and character:FindFirstChild("Humanoid").Health > 0
+			then
+				PlayerStatus[player.Name] = true
+			elseif player then
+				PlayerStatus[player.Name] = false
+			end
+		end)
+		if
+			player
+			and player.Character
+			and player.Character:IsDescendantOf(game:GetService("Workspace"))
+			and player.Character:FindFirstChild("Humanoid")
+		then
+			PlayerStatus[player.Name] = true
+			player.Character:WaitForChild("Humanoid").Died:Connect(function()
+				if
+					player
+					and player.Character
+					and player.Character:IsDescendantOf(game:GetService("Workspace"))
+					and player.Character:FindFirstChild("Humanoid")
+					and player.Character:FindFirstChild("Humanoid").Health > 0
+				then
+					PlayerStatus[player.Name] = true
+				elseif player then
+					PlayerStatus[player.Name] = false
+				end
+			end)
+		end
+	end
+end
+
+if IsServer and FastNet2.Settings.waitPlr then
+	Players.PlayerAdded:Connect(_loadPlrStatus)
+	Players.PlayerRemoving:Connect(function(player)
+		if player and PlayerStatus[player.Name] ~= nil then
+			PlayerStatus[player.Name] = nil
+		end
+	end)
+	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta/experimental).", 1)
+end
+
 if IsClient then
 	Debug.silentDebug(false)
 else
@@ -134,92 +223,6 @@ if not Nets:FindFirstChild("Event") then
 	_NetEvent.Name = "Event"
 else
 	_NetEvent = Nets:WaitForChild("Event")
-end
-
-local PlayerStatus: Tany = {} -- players status for holding connection feature method (experimental)
-if IsServer and FastNet2.Settings.waitPlr then
-	Players.PlayerAdded:Connect(function(player)
-		if player then
-			if not PlayerStatus[player.Name] then
-				PlayerStatus[player.Name] = false
-			end
-			player.CharacterAdded:Connect(function(character)
-				if
-					player
-					and character
-					and character:IsDescendantOf(game:GetService("Workspace"))
-					and character:FindFirstChild("Humanoid")
-				then
-					PlayerStatus[player.Name] = true
-				elseif player then
-					task.wait(2.5) -- wait for recheck
-					if
-						player
-						and character
-						and character:IsDescendantOf(game:GetService("Workspace"))
-						and character:FindFirstChild("Humanoid")
-					then
-						PlayerStatus[player.Name] = true
-					elseif player then
-						PlayerStatus[player.Name] = false
-					end
-				end
-				character:WaitForChild("Humanoid").Died:Connect(function()
-					if
-						player
-						and character
-						and character:IsDescendantOf(game:GetService("Workspace"))
-						and character:FindFirstChild("Humanoid")
-						and character:FindFirstChild("Humanoid").Health > 0
-					then
-						PlayerStatus[player.Name] = true
-					elseif player then
-						PlayerStatus[player.Name] = false
-					end
-				end)
-			end)
-			player.CharacterRemoving:Connect(function(character)
-				if
-					player
-					and character
-					and character:IsDescendantOf(game:GetService("Workspace"))
-					and character:FindFirstChild("Humanoid")
-					and character:FindFirstChild("Humanoid").Health > 0
-				then
-					PlayerStatus[player.Name] = true
-				elseif player then
-					PlayerStatus[player.Name] = false
-				end
-			end)
-			if
-				player
-				and player.Character
-				and player.Character:IsDescendantOf(game:GetService("Workspace"))
-				and player.Character:FindFirstChild("Humanoid")
-			then
-				PlayerStatus[player.Name] = true
-				player.Character:WaitForChild("Humanoid").Died:Connect(function()
-					if
-						player
-						and player.Character
-						and player.Character:IsDescendantOf(game:GetService("Workspace"))
-						and player.Character:FindFirstChild("Humanoid")
-						and player.Character:FindFirstChild("Humanoid").Health > 0
-					then
-						PlayerStatus[player.Name] = true
-					elseif player then
-						PlayerStatus[player.Name] = false
-					end
-				end)
-			end
-		end
-	end)
-	Players.PlayerRemoving:Connect(function(player)
-		if player and PlayerStatus[player.Name] ~= nil then
-			PlayerStatus[player.Name] = nil
-		end
-	end)
-	Debug.__direct_debug(1 ~= 1, "[FastNet2]: Hold connection enabled (beta/experimental).", 1)
 end
 
 --// Internal Functions
@@ -250,11 +253,11 @@ function reConfigure(): string -- EXPERIMENTAL FEATURE
 		if FastNet2.Settings.CHECK_VERSION and IsServer then
 			local HttpService = game:GetService("HttpService")
 			local success, ver = pcall(function()
-				return HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
+				return tonumber(HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true))
 			end)
 			if success then
 				Debug.__direct_debug(
-					FastNet2.build >= tonumber(ver),
+					FastNet2.build >= ver,
 					string.format(
 						"[FastNet2]: New version available (new: %s | current: %s)",
 						tostring(ver),
@@ -263,7 +266,7 @@ function reConfigure(): string -- EXPERIMENTAL FEATURE
 					1
 				)
 			else
-				Debug.__direct_debug(success, string.format("[FastNet2]: Failed to check latest version (:%s)", ver), 2)
+				Debug.__direct_debug(success, string.format("[FastNet2]: Failed to check latest version (:%s)", tostring(ver)), 2)
 			end
 		end
 	end)
@@ -371,16 +374,321 @@ function _createSignal(remoteName: string)
 	end
 end
 
+-- FastNet2 Remote (APIs Function) for Server-Side
+local Server = {}
+Server.__index = Server
+
+type Server = Server
+
+function Server.new(remoteName, _type)
+	local self = setmetatable({}, Server)
+	self.remoteName = remoteName
+	self._type = _type
+	self.__disconnected = false
+	return self
+end
+
+function Server.Fires(self: Server, ...: any)
+	local _currentIdentifier: Tany = _toSend[self.remoteName]
+	if IsExist(self.remoteName) and _currentIdentifier then
+		table.insert(_currentIdentifier, { "All", { ... } })
+	end
+end
+function Server.fires(self: Server, ...: any)
+	return self.Fires(self, ...)
+end
+function Server.Fire(self: Server, player: Player, ...: any)
+	local _currentIdentifier: Tany = _toSend[self.remoteName]
+	if IsExist(self.remoteName) and _currentIdentifier then
+		table.insert(_currentIdentifier, { player, { ... } })
+	end
+end
+function Server.fire(self: Server, player: Player, ...: any)
+	return self.Fire(self, player, ...)
+end
+function Server.Pull(self: Server, player: Player, timeout: number, ...: any): any?
+	Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+	local _currentIdentifier: Tany = _toSend[self.remoteName]
+	if IsExist(self.remoteName) and _currentIdentifier then
+		if not _signals[self.remoteName] then
+			_createSignal(self.remoteName)
+		end
+		if timeout and typeof(timeout) == "number" then
+			if timeout < 5 then
+				timeout = 5
+			end
+		else
+			timeout = 5
+		end
+		local finish, _t, toreturn = false, tick(), nil
+		local _makeId = _createId()
+		local tosend: any = { ... }
+		_signals[self.remoteName]["_invokeSignal" .. _makeId] = function(...)
+			finish = true
+			toreturn = (...)
+		end
+		local _yield = task.spawn(function()
+			table.insert(_currentIdentifier, { player, { _makeId, tosend } })
+		end)
+		while not finish do
+			if (tick() - _t) >= timeout then
+				finish = true
+				task.cancel(_yield)
+				break
+			end
+			task.wait()
+		end
+		_signals[self.remoteName]["_invokeSignal" .. _makeId] = nil
+		return toreturn
+	end
+	return nil
+end
+function Server.pull(self: Server, player: Player, timeout: number, ...: any): any?
+	return self.Pull(self, player, timeout, ...)
+end
+function Server.Wait(self: Server): number -- EXPERIMENTAL
+	local _now, this = os.clock(), _createId()
+	local val, _on = 0, true
+	_signals[self.remoteName]["_signal" .. this] = function()
+		val = os.clock()
+		_on = false
+		_signals[self.remoteName]["_signal" .. this] = nil
+	end
+	repeat
+		task.wait()
+	until _on == false and _findIdentifier(self.remoteName)
+	return (val - _now)
+end
+function Server.wait(self: Server): number
+	return self.Wait(self)
+end
+function Server.Listen(self: Server, waitTill: boolean | any, callback: any): Tany
+	if typeof(waitTill) == "boolean" and waitTill == true then
+		if self.__disconnected then
+			self.__disconnected = false
+		end
+		repeat
+			task.wait()
+		until self.__disconnected == false and IsExist(self.remoteName) == true
+		__callbacks[self.remoteName] = {
+			func = callback or nil,
+		}
+	else
+		__callbacks[self.remoteName] = {
+			func = waitTill or nil,
+		}
+	end
+	__callbacks[self.remoteName]["_type"] = __nets[self.remoteName]._type
+	if not table.isfrozen(self) then
+		return table.freeze(self)
+	else
+		return self
+	end
+end
+function Server.listen(self: Server, waitTill: boolean | any, callback: any): Tany
+	return self.Listen(self, waitTill, callback)
+end
+function Server.Once(self: Server, waitTill: boolean | any, callbacks: any)
+	self:Listen(waitTill, callbacks)
+	if __callbacks[self.remoteName] then
+		__callbacks[self.remoteName]["_once"] = true
+	end
+end
+function Server.once(self: Server, waitTill: boolean | any, callbacks: any)
+	self.Once(self, waitTill, callbacks)
+end
+function Server.Disconnect(self: Server, message: string?)
+	if self and self.__disconnected == false then
+		self.__disconnected = true
+		__callbacks[self.remoteName] = nil
+		if message and typeof(message) == "string" and message:len() > 0 then
+			Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
+		end
+	elseif self then
+		Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)), 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+	end
+end
+function Server.disconnect(self: Server, message: string?)
+	self.Disconnect(self, message)
+end
+function Server.Disconnected(self: Server): boolean
+	return self.__disconnected
+end
+function Server.disconnected(self: Server): boolean
+	return self.Disconnected(self)
+end
+function Server.logs(self: Server)
+	return Debug.get_log(Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+end
+function Server.Destroy(self: Server)
+	if self and __nets[self.remoteName] ~= nil then
+		__nets[self.remoteName] = nil
+		__callbacks[self.remoteName] = nil
+		_signals[self.remoteName] = nil
+		self.__disconnected = true
+		_removeIdentifier(self.remoteName)
+	end
+end
+function Server.destroy(self: Server)
+	self.Destroy(self)
+end
+
+-- FastNet2 Remote (APIs Function) for Client-Side
+local Client = {}
+Client.__index = Client
+
+type Client = Client
+
+function Client.new(remoteName, _type)
+	local self = setmetatable({}, Client)
+	self.remoteName = remoteName
+	self._type = _type
+	self.__disconnected = false
+	return self
+end
+
+function Client.Fire(self: Client, ...: any)
+	local _currentIdentifier: Tany = _toSend[self.remoteName]
+	if IsExist(self.remoteName) and _currentIdentifier then
+		if
+			FastNet2.Settings._enableLimitingRate
+			and #_currentIdentifier > (FastNet2.Settings._maxRate_perEvent or 500)
+		then -- rate limit for client only
+			return -- reject
+		end
+		table.insert(_currentIdentifier, { ... })
+	end
+end
+function Client.fire(self: Client, ...: any)
+	self.Fire(self, ...)
+end
+function Client.Pull(self: Client, timeout: number, ...: any): any?
+	local _currentIdentifier: Tany = _toSend[self.remoteName]
+	if IsExist(self.remoteName) and _currentIdentifier then
+		if not _signals[self.remoteName] then
+			_createSignal(self.remoteName)
+		end
+		if timeout and typeof(timeout) == "number" then
+			if timeout < 5 then
+				timeout = 5
+			end
+		else
+			timeout = 5
+		end
+		local finish, _t, toreturn = false, tick(), nil
+		local _makeId = _createId()
+		local tosend: any = { ... }
+		_signals[self.remoteName]["_invokeSignal" .. _makeId] = function(...)
+			finish = true
+			toreturn = (...)
+		end
+		local _yield = task.spawn(function()
+			table.insert(_currentIdentifier, { _makeId, tosend })
+		end)
+		while not finish do
+			if _findIdentifier(self.remoteName) == false or (tick() - _t) >= timeout then
+				finish = true
+				task.cancel(_yield)
+				break
+			end
+			task.wait()
+		end
+		_signals[self.remoteName]["_invokeSignal" .. _makeId] = nil
+		return toreturn
+	end
+	return nil
+end
+function Client.pull(self: Client, timeout: number, ...: any): any?
+	return self.Pull(self, timeout, ...)
+end
+function Client.Wait(self: Client): number -- EXPERIMENTAL
+	local _now, this = os.clock(), _createId()
+	local val, _on = 0, true
+	_signals[self.remoteName]["_signal" .. this] = function()
+		val = os.clock()
+		_on = false
+		_signals[self.remoteName]["_signal" .. this] = nil
+	end
+	repeat
+		task.wait()
+	until _on == false and _findIdentifier(self.remoteName)
+	return (val - _now)
+end
+function Client.wait(self: Client): number
+	return self.Wait(self)
+end
+function Client.Listen(self: Client, waitTill: boolean | any, callback: any): Tany
+	if typeof(waitTill) == "boolean" and waitTill == true then
+		if self.__disconnected then
+			self.__disconnected = false
+		end
+		repeat
+			task.wait()
+		until self.__disconnected == false and IsExist(self.remoteName) == true
+		__callbacks[self.remoteName] = {
+			func = callback or nil,
+		}
+	else
+		__callbacks[self.remoteName] = {
+			func = waitTill or nil,
+		}
+	end
+	__callbacks[self.remoteName]["_type"] = __nets[self.remoteName]._type
+	if not table.isfrozen(self) then
+		return table.freeze(self)
+	else
+		return self
+	end
+end
+function Client.listen(self: Client, waitTill: boolean | any, callback: any): Tany
+	return self.Listen(self, waitTill, callback)
+end
+function Client.Once(self: Client, waitTill: boolean | any, callbacks: any)
+	self:Listen(waitTill, callbacks)
+	if __callbacks[self.remoteName] then
+		__callbacks[self.remoteName]["_once"] = true
+	end
+end
+function Client.once(self: Client, waitTill: boolean | any, callbacks: any)
+	return self.Once(self, waitTill, callbacks)
+end
+function Client.Disconnect(self: Client, message: string?)
+	if self and self.__disconnected == false then
+		self.__disconnected = true
+		__callbacks[self.remoteName] = nil
+		if message and typeof(message) == "string" and message:len() > 0 then
+			Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
+		end
+	elseif self then
+		Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)), 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+	end
+end
+function Client.disconnect(self: Client, message: string?)
+	return self.Disconnect(self, message)
+end
+function Client.Disconnected(self: Client): boolean
+	return self.__disconnected
+end
+function Client.disconnected(self: Client): boolean
+	return self.Disconnected(self)
+end
+function Client.logs(self: Client)
+	return Debug.get_log(Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+end
+function Client.Destroy(self: Client)
+	if self and __nets[self.remoteName] ~= nil then
+		__nets[self.remoteName] = nil
+		__callbacks[self.remoteName] = nil
+		_signals[self.remoteName] = nil
+		self.__disconnected = true
+		_removeIdentifier(self.remoteName)
+	end
+end
+function Client.destroy(self: Client)
+	self.Destroy(self)
+end
+
 --// APIs
---function Core.init(enableDebugs: boolean, levelForPrimaryModeThreads: number?): any
---	Debug.__direct_debug(typeof(enableDebugs) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
---	if levelForPrimaryModeThreads ~= nil then
---		Debug.__direct_debug(typeof(levelForPrimaryModeThreads) == "number", "[FastNet2]: Invalid type of level mode", 2)
---	end
---	Debug.set_debug(enableDebugs or true)
---	reConfigure(levelForPrimaryModeThreads)
---	return table.freeze(FastNet2)
---end
 
 function FastNet2.getdebugcaches(): Tany
 	return Debug.get_log()
@@ -402,7 +710,7 @@ function FastNet2.toBestFormNum(num: number): number | string
 	return Driver.toBestFormNum(num)
 end
 
-function FastNet2.fps(convert: boolean?)
+function FastNet2.delta(convert: boolean?)
 	if convert then
 		return (1 / RunService.Heartbeat:Wait())
 	end
@@ -442,13 +750,15 @@ function FastNet2:Exist(remoteName: string): boolean
 	return IsExist(Driver.enc(FastNet2.Settings.useb64 or false, remoteName))
 end
 
-function FastNet2:Get(remoteName: string, waitFor: number?): Tany
+function FastNet2:Get(remoteName: string, waitFor: number?)
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2, remoteName)
 	remoteName = Driver.enc(FastNet2.Settings.useb64 or false, remoteName)
 	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
+		elseif waitFor > 15 then
+			waitFor = 15
 		end
 		local finish, _t = false, tick()
 		local _yield = task.spawn(function()
@@ -459,9 +769,10 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 			finish = true
 		end)
 		while not finish do
-			if (tick() - _t) >= waitFor then
+			if (tick() - _t) >= waitFor and not finish then
 				finish = true
 				task.cancel(_yield)
+				Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to retrieve %s (timed-out yield)", remoteName), 2)
 				break
 			end
 			task.wait()
@@ -469,223 +780,18 @@ function FastNet2:Get(remoteName: string, waitFor: number?): Tany
 	end
 	_createSignal(remoteName)
 	_createIdentifier(remoteName)
-	local __new: Tany = {}
-	local __disconnected = false
-	-- functions
-	function __new:Wait(): number -- EXPERIMENTAL
-		local _now, this = os.clock(), _createId()
-		local val, _on = 0, true
-		_signals[remoteName]["_signal" .. this] = function()
-			val = os.clock()
-			_on = false
-			_signals[remoteName]["_signal" .. this] = nil
-		end
-		repeat
-			task.wait()
-		until _on == false and _findIdentifier(remoteName)
-		return (val - _now)
-	end
-	function __new:wait(): number
-		return self:Wait()
-	end
-	function __new:Listen(waitTill: boolean | any, callback: any): Tany
-		if typeof(waitTill) == "boolean" and waitTill == true then
-			if __disconnected then
-				__disconnected = false
-			end
-			repeat
-				task.wait()
-			until __disconnected == false and IsExist(remoteName) == true
-			__callbacks[remoteName] = {
-				func = callback or nil,
-			}
-		else
-			__callbacks[remoteName] = {
-				func = waitTill or nil,
-			}
-		end
-		__callbacks[remoteName]["_type"] = __nets[remoteName]._type
-		if not table.isfrozen(self) then
-			return table.freeze(self)
-		else
-			return self
-		end
-	end
-	function __new:listen(waitTill: boolean | any, callbacks: any)
-		return self:Listen(waitTill, callbacks)
-	end
-	function __new:Once(waitTill: boolean | any, callbacks: any)
-		self:Listen(waitTill, callbacks)
-		if __callbacks[remoteName] then
-			__callbacks[remoteName]["_once"] = true
-		end
-	end
-	function __new:once(waitTill: boolean | any, callbacks: any)
-		self:Once(waitTill, callbacks)
-	end
-	function __new:Disconnect(message: string?)
-		if __new and __disconnected == false then
-			__disconnected = true
-			__callbacks[remoteName] = nil
-			if message and typeof(message) == "string" and message:len() > 0 then
-				Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
-			end
-		else
-			Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(FastNet2.Settings.useb64 or false, remoteName)), 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
-		end
-	end
-	function __new:disconnect(message: string?)
-		self:Disconnect(message)
-	end
-	function __new.Disconnected(): boolean
-		return __disconnected
-	end
-	function __new.logs()
-		return Debug.get_log(Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
-	end
-	if __nets and __nets[remoteName] and __nets[remoteName]._type == "re" then
-		if IsServer then
-			function __new:Fires(...: any)
-				local _currentIdentifier: Tany = _toSend[remoteName]
-				if IsExist(remoteName) and _currentIdentifier then
-					table.insert(_currentIdentifier, { "All", { ... } })
-				end
-			end
-			function __new:Fire(player: Player, ...: any)
-				local _currentIdentifier: Tany = _toSend[remoteName]
-				if IsExist(remoteName) and _currentIdentifier then
-					table.insert(_currentIdentifier, { player, { ... } })
-				end
-			end
-		else
-			function __new:Fire(...: any)
-				local _currentIdentifier: Tany = _toSend[remoteName]
-				if IsExist(remoteName) and _currentIdentifier then
-					if
-						FastNet2.Settings._enableLimitingRate
-						and #_currentIdentifier > (FastNet2.Settings._maxRate_perEvent or 500)
-					then -- rate limit for client only
-						return -- reject
-					end
-					table.insert(_currentIdentifier, { ... })
-				end
-			end
-		end
-	elseif __nets and __nets[remoteName] and __nets[remoteName]._type == "rf" then
-		if IsServer then
-			function __new:Pull(player: Player, timeout: number, ...: any): any?
-				Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
-				local _currentIdentifier: Tany = _toSend[remoteName]
-				if IsExist(remoteName) and _currentIdentifier then
-					if not _signals[remoteName] then
-						_createSignal(remoteName)
-					end
-					if timeout and typeof(timeout) == "number" then
-						if timeout < 5 then
-							timeout = 5
-						end
-					else
-						timeout = 5
-					end
-					local finish, _t, toreturn = false, tick(), nil
-					local _makeId = _createId()
-					local tosend: any = { ... }
-					_signals[remoteName]["_invokeSignal" .. _makeId] = function(...)
-						finish = true
-						toreturn = (...)
-					end
-					local _yield = task.spawn(function()
-						table.insert(_currentIdentifier, { player, { _makeId, tosend } })
-					end)
-					while not finish do
-						if (tick() - _t) >= timeout then
-							finish = true
-							task.cancel(_yield)
-							break
-						end
-						task.wait()
-					end
-					_signals[remoteName]["_invokeSignal" .. _makeId] = nil
-					return toreturn
-				end
-				return nil
-			end
-			function __new:pull(player: Player, timeout: number, ...: any): any?
-				return self:Pull(player, timeout, ...)
-			end
-		else
-			function __new:Pull(timeout: number, ...: any): any?
-				local _currentIdentifier: Tany = _toSend[remoteName]
-				if IsExist(remoteName) and _currentIdentifier then
-					if not _signals[remoteName] then
-						_createSignal(remoteName)
-					end
-					if timeout and typeof(timeout) == "number" then
-						if timeout < 5 then
-							timeout = 5
-						end
-					else
-						timeout = 5
-					end
-					local finish, _t, toreturn = false, tick(), nil
-					local _makeId = _createId()
-					local tosend: any = { ... }
-					_signals[remoteName]["_invokeSignal" .. _makeId] = function(...)
-						finish = true
-						toreturn = (...)
-					end
-					local _yield = task.spawn(function()
-						table.insert(_currentIdentifier, { _makeId, tosend })
-					end)
-					while not finish do
-						if _findIdentifier(remoteName) == false or (tick() - _t) >= timeout then
-							finish = true
-							task.cancel(_yield)
-							break
-						end
-						task.wait()
-					end
-					_signals[remoteName]["_invokeSignal" .. _makeId] = nil
-					return toreturn
-				end
-				return nil
-			end
-			function __new:pull(player: Player, timeout: number, ...: any): any?
-				return self:Pull(player, timeout, ...)
-			end
-		end
+	if IsClient then
+		return Client.new(remoteName, __nets[remoteName]._type)
 	else
-		table.clear(__new)
-		task.spawn(function()
-			if _findIdentifier(remoteName) then
-				Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unexpected spesific type to %s", remoteName), 3)
-				_removeIdentifier(remoteName)
-			else
-				Debug.__direct_debug(1 ~= 1, "[FastNet2]: Unexpected spesific type, unable to create", 2)
-			end
-		end)
-		return table.freeze({})
+		return Server.new(remoteName, __nets[remoteName]._type)
 	end
-	function __new:Destroy()
-		if __nets[remoteName] ~= nil then
-			__nets[remoteName] = nil
-			__callbacks[remoteName] = nil
-			_signals[remoteName] = nil
-			__disconnected = true
-			_removeIdentifier(remoteName)
-		end
-	end
-	function __new:destroy()
-		self:Destroy()
-	end
-	return table.freeze(__new)
 end
 
 function FastNet2:get(remoteName: string, waitFor: number?): Tany
 	return self:Get(Driver.enc(FastNet2.Settings.useb64 or false, remoteName), waitFor or 5)
 end
 
-function FastNet2:Create(remoteName: string, typeRemote: string): Tany
+function FastNet2:Create(remoteName: string, typeRemote: string)
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2)
 	Debug.__direct_debug(typeof(typeRemote) == "string", "[FastNet2]: Invalid type of remote", 3, 2)
 	local enc_name = Driver.enc(FastNet2.Settings.useb64 or false, remoteName)
@@ -1165,8 +1271,8 @@ RunService.PostSimulation:Connect(function()
 		} -- middleware
 		local __reach_s_max: boolean = false
 		local __reach_c_max: boolean = false
-		local __Sindex: number = 0
-		local __Cindex: number = 0
+		local __Sindex: any = 0
+		local __Cindex: any = 0
 		debug.profilebegin("process")
 		for identifier: string, packages in _toSend do
 			if __reach_s_max and __reach_c_max then
@@ -1320,19 +1426,26 @@ RunService.PostSimulation:Connect(function()
 		table.clear(to_send) -- prevent memory leaks?
 		__Cindex = nil
 		__Sindex = nil
-		__reach_c_max = nil
-		__reach_s_max = nil
 		__t = os.clock()
 	end
 end)
 
+if IsServer and FastNet2.Settings.waitPlr then
+	repeat task.wait() until #Players:GetPlayers() > 0
+	for i, player in pairs(Players:GetPlayers()) do
+		task.spawn(_loadPlrStatus, player)
+	end
+end
+
 reConfigure()
+
 Debug.__direct_debug(
 	1 ~= 1,
 	string.format(
-		"FastNet2 initialized [ver_%s (%s) | %s | %sms]",
+		"FastNet2 initialized [ver_%s (%s) <- %s | %s | %sms]",
 		FastNet2.version,
 		tostring(FastNet2.build),
+		FastNet2.production,
 		__getProvider(),
 		(tick() - __load_s) * 1000
 	),
