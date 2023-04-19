@@ -20,8 +20,11 @@ https://wally.run/package/imezx/fastnet2
 # FastNet2.up(): number
 # FastNet2.down(): number
 # FastNet2.Wait(): number
+# FastNet2.delta()
 
 # * FastNet2 - RFunctions
+# FastNet2Remote:Disconenct(messageOutput: string): undefined
+-> Disconenct currently connected remote, messageOutput print-out when disconnected
 
 # * FastNet2 - REvents
 # FastNet2Remote:Listen(waitTill: boolean | any, callback: any): never
