@@ -55,23 +55,9 @@ if typeof(FastNet2.Settings.useb64) ~= "boolean" then
 	FastNet2.Settings.useb64 = false
 end
 
-if FastNet2.Settings.smooth_mode == 1 then
-	FastNet2.Settings.smooth_mode = (1 / 30 - 0.00015)
-elseif FastNet2.Settings.smooth_mode == 2 then
-	FastNet2.Settings.smooth_mode = (1 / 60 - 0.00015)
-elseif FastNet2.Settings.smooth_mode == 3 then
-	FastNet2.Settings.smooth_mode = (1 / 90 - 0.00015)
-elseif FastNet2.Settings.smooth_mode == 4 then
-	FastNet2.Settings.smooth_mode = (1 / 120 - 0.00015)
-else
-	FastNet2.Settings.smooth_mode = (1 / 60 - 0.00015) -- to normal
-end
+FastNet2.Settings.smooth_mode = 1 / ((FastNet2.Settings.smooth_mode or 2) * 30) - 0.00015
 
-if FastNet2.Settings._maxRate_perEvent ~= nil then
-	if FastNet2.Settings._maxRate_perEvent < 1 or FastNet2.Settings._maxRate_perEvent >= math.huge then
-		FastNet2.Settings._maxRate_perEvent = 500
-	end
-else
+if not FastNet2.Settings._maxRate_perEvent or FastNet2.Settings._maxRate_perEvent < 1 or FastNet2.Settings._maxRate_perEvent >= math.huge then
 	FastNet2.Settings._maxRate_perEvent = 500
 end
 
