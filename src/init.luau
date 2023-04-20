@@ -210,19 +210,19 @@ if FastNet2.Settings._enableEncoding then
 	Debug.__direct_debug(FastNet2.Settings._enableEncoding == true, "[FastNet2]: Encode is enabled.", 2)
 end
 
-local Nets: any
 local _NetEvent: RemoteEvent
-if not script:FindFirstChild("Net") then
-	Nets = Instance.new("Folder", script)
-	Nets.Name = "Net"
+if IsServer then
+	if not script:FindFirstChild("Event") then
+		_NetEvent = Instance.new("RemoteEvent", script)
+		_NetEvent.Name = "Event"
+	else
+		_NetEvent = script:WaitForChild("Event")
+	end
 else
-	Nets = script:WaitForChild("Net", 5)
-end
-if not Nets:FindFirstChild("Event") then
-	_NetEvent = Instance.new("RemoteEvent", Nets)
-	_NetEvent.Name = "Event"
-else
-	_NetEvent = Nets:WaitForChild("Event")
+	if not script:FindFirstChild("Event") then
+		repeat task.wait() until script:FindFirstChild("Event")
+	end
+	_NetEvent = script:WaitForChild("Event")
 end
 
 --// Internal Functions
