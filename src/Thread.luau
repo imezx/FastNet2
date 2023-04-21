@@ -21,12 +21,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ]]
-
 --!strict
 local ThreadPool = {}
 local threadIndex: number = 0
 
-function ThreadPool.__start(indexs: number) -- How many threads to pre-allocate
+function ThreadPool.__start(indexs: number)
 	debug.profilebegin("FastNet2.thread.create")
 	threadIndex = indexs
 	local threads = table.create(threadIndex)
@@ -35,9 +34,7 @@ function ThreadPool.__start(indexs: number) -- How many threads to pre-allocate
 	end
 	local function runner(thread: thread): never
 		while true do
-			-- Run the function
 			passer(coroutine.yield())
-			-- Done, make this thread available
 			threadIndex += 1
 			threads[threadIndex] = thread
 		end
@@ -49,25 +46,12 @@ function ThreadPool.__start(indexs: number) -- How many threads to pre-allocate
 	end
 	debug.profileend()
 	return function<_, params>(func: (params) -> (), ...: params): (thread)
-		-- Xthread 1.0 Feature (free brute-threading)
-		if threadIndex < 25 or threadIndex <= 0 then
-			debug.profilebegin("FastNet2.thread.freeThreads")
-			threadIndex = 0
-			for i=1,5 do
-				local thread = coroutine.create(runner)
-				coroutine.resume(thread, thread)
-				threadIndex += 1
-				threads[threadIndex] = thread
-			end
-			debug.profileend()
-		end
-		if threadIndex ~= 0 then
+		if threadIndex > 0 then
 			local thread = threads[threadIndex]
 			threads[threadIndex] = nil
 			threadIndex -= 1
-
 			return task.spawn(thread, func, ...)
-		else
+		else -- create new thread while no thread left existing
 			local thread = coroutine.create(runner)
 			coroutine.resume(thread, thread)
 			return task.spawn(thread, func, ...)
