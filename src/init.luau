@@ -448,7 +448,7 @@ end
 function Server.wait(self: Server): number
 	return self.Wait(self)
 end
-function Server.Listen(self: Server, waitTill: boolean | any, callback: any): Tany
+function Server.Listen(self: Server, waitTill: boolean | any, callback: (...any) -> ()): Tany
 	if typeof(waitTill) == "boolean" and waitTill == true then
 		if self.__disconnected then
 			self.__disconnected = false
@@ -603,7 +603,7 @@ end
 function Client.wait(self: Client): number
 	return self.Wait(self)
 end
-function Client.Listen(self: Client, waitTill: boolean | any, callback: any): Tany
+function Client.Listen(self: Client, waitTill: boolean | any, callback: (...any) -> ()): Tany
 	if typeof(waitTill) == "boolean" and waitTill == true then
 		if self.__disconnected then
 			self.__disconnected = false
