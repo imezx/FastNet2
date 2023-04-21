@@ -58,7 +58,7 @@ if typeof(FastNet2.Settings.useb64) ~= "boolean" then
 	FastNet2.Settings.useb64 = false
 end
 
-FastNet2.Settings.smooth_mode = 1 / (math.min(30, FastNet2.Settings.smooth_mode or 2) * 30) - 0.00015
+FastNet2.Settings.smooth_mode = 1 / (math.min(3, FastNet2.Settings.smooth_mode or 2) * 30) - 0.00015
 
 if
 	FastNet2.Settings._maxRate_perEvent ~= nil
