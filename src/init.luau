@@ -13,6 +13,9 @@
 		|-> Sent
 	-> Clear all cache/used tables & Finish
 <<<
+
+NOTE: If your using "Deferred" option (SignalBehavior), i suggest use :Once over :Connect cause Deferred may break it
+
 ]]
 --
 
@@ -24,7 +27,7 @@ assert(
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
-FastNet2.build = 8.4
+FastNet2.build = 8.5
 FastNet2.production = "Dev"
 -- Internal Settings
 FastNet2.Settings = {
@@ -34,7 +37,7 @@ FastNet2.Settings = {
 	["__threads"] = 50, -- default: 50
 	["__currentMode"] = 2, -- default: 2 (1-3)
 	["_enableEncoding"] = false, -- default: false, encode to binary (*for string and numbers only*) & turning this feature may risk bandwidth usages taken and performances
-	["smooth_mode"] = 2, -- default: 2, Modes: 1 (Low 30), 2 (Default 60), 3 (High 90), 4 (Ultra 120) [LOCK-FRAME, NOT REALLY AFFECT TO PERFORMANCE]
+	["smooth_mode"] = 2, -- default: 2, mode*30 [LOCK-FRAME, NOT REALLY AFFECT TO PERFORMANCE]
 	["useb64"] = false, -- default: false, if it false it will use binary instead else base64 for encode
 	["waitPlr"] = false, -- default: false, hold connection until player character is loaded/spawn, off it for Deferred which is still experimental/beta
 	["SILENT_DEBUG"] = false, -- default: false, set debug logs being silent [NOT AFFECT TO CLIENT]
@@ -55,16 +58,20 @@ if typeof(FastNet2.Settings.useb64) ~= "boolean" then
 	FastNet2.Settings.useb64 = false
 end
 
-FastNet2.Settings.smooth_mode = 1 / ((FastNet2.Settings.smooth_mode or 2) * 30) - 0.00015
+FastNet2.Settings.smooth_mode = 1 / (math.min(30, FastNet2.Settings.smooth_mode or 2) * 30) - 0.00015
 
-if not FastNet2.Settings._maxRate_perEvent or FastNet2.Settings._maxRate_perEvent < 1 or FastNet2.Settings._maxRate_perEvent >= math.huge then
+if
+	FastNet2.Settings._maxRate_perEvent ~= nil
+	or FastNet2.Settings._maxRate_perEvent < 1
+	or FastNet2.Settings._maxRate_perEvent >= math.huge
+then
 	FastNet2.Settings._maxRate_perEvent = 500
 end
 
 type Tany = { [any]: any }
 type tHold = { [string]: Tany }
 
--- FastNet2 Warehouse & Middleware
+-- FastNet2 Warehouse
 local __callbacks: Tany = {}
 local __nets: Tany = {}
 local _toSend: Tany = {}
@@ -206,7 +213,9 @@ if IsServer then
 	end
 else
 	if not script:FindFirstChild("Event") then
-		repeat task.wait() until script:FindFirstChild("Event")
+		repeat
+			task.wait()
+		until script:FindFirstChild("Event")
 	end
 	_NetEvent = script:WaitForChild("Event")
 end
@@ -220,16 +229,10 @@ function reConfigure(): string -- EXPERIMENTAL FEATURE
 	)
 	if not initialized then
 		initialized = true
-		if not LevelModes[FastNet2.Settings.__currentMode] then
+		if not LevelModes[tonumber(FastNet2.Settings.__currentMode)] then
 			FastNet2.Settings.__currentMode = 2
 		end
-		if FastNet2.Settings.__currentMode == 3 then
-			FastNet2.Settings.__threads = 100
-		elseif FastNet2.Settings.__currentMode == 2 then
-			FastNet2.Settings.__threads = 50
-		else
-			FastNet2.Settings.__threads = 25
-		end
+		FastNet2.Settings.__threads = (25 * math.min(3, FastNet2.Settings.__currentMode))
 		Threads = Threads.__start(FastNet2.Settings.__threads)
 	end
 	if FastNet2.Settings.__threads < 25 or FastNet2.Settings.__threads > 100 then
@@ -239,7 +242,9 @@ function reConfigure(): string -- EXPERIMENTAL FEATURE
 		if FastNet2.Settings.CHECK_VERSION and IsServer then
 			local HttpService = game:GetService("HttpService")
 			local success, ver = pcall(function()
-				return tonumber(HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true))
+				return tonumber(
+					HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
+				)
 			end)
 			if success then
 				Debug.__direct_debug(
@@ -252,7 +257,11 @@ function reConfigure(): string -- EXPERIMENTAL FEATURE
 					1
 				)
 			else
-				Debug.__direct_debug(success, string.format("[FastNet2]: Failed to check latest version (:%s)", tostring(ver)), 2)
+				Debug.__direct_debug(
+					success,
+					string.format("[FastNet2]: Failed to check latest version (:%s)", tostring(ver)),
+					2
+				)
 			end
 		end
 	end)
@@ -279,40 +288,40 @@ end
 function _createId(length: number | nil): string | number
 	if length ~= nil and tonumber(length) == nil then
 		return table.concat({
-			randNum(11, 999, true),
-			string.char(randNum(97, 122, true)),
-			string.char(randNum(97, 122, true)),
-			string.char(randNum(97, 122, true)),
-			randNum(11, 999, true),
-			string.char(randNum(97, 122, true)),
-			string.char(randNum(97, 122, true)),
+			randNum(11, 999),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			randNum(11, 999),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
 			randNum(11, 65535, true),
-			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122)),
 			randNum(1, 65535, true),
 		})
 	end
 	if length == nil or length < 5 or length > 16 then
 		return table.concat({
-			randNum(11, 999, true),
-			string.char(randNum(97, 122, true)),
-			string.char(randNum(97, 122, true)),
-			string.char(randNum(97, 122, true)),
-			randNum(11, 999, true),
-			string.char(randNum(97, 122, true)),
-			string.char(randNum(97, 122, true)),
+			randNum(11, 999),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
+			randNum(11, 999),
+			string.char(randNum(97, 122)),
+			string.char(randNum(97, 122)),
 			randNum(11, 65535, true),
-			string.char(randNum(97, 122, true)),
+			string.char(randNum(97, 122)),
 			randNum(1, 65535, true),
 		})
 	else
 		local _rand: Tany = {}
 		for i = 1, length do
 			if randNum(1, 4, true) == 4 then
-				table.insert(_rand, randNum(11, 999, true))
+				table.insert(_rand, randNum(11, 999))
 			elseif randNum(1, 2, true) == 2 then
 				table.insert(_rand, randNum(1, 99, true))
 			else
-				table.insert(_rand, string.char(randNum(97, 122, true)))
+				table.insert(_rand, string.char(randNum(97, 122)))
 			end
 		end
 		return table.concat(_rand)
@@ -393,7 +402,13 @@ function Server.fire(self: Server, player: Player, ...: any)
 	return self.Fire(self, player, ...)
 end
 function Server.Pull(self: Server, player: Player, timeout: number, ...: any): any?
-	Debug.__direct_debug(typeof(player) == "Instance", "[FastNet2]: Invalid type of player.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+	Debug.__direct_debug(
+		typeof(player) == "Instance",
+		"[FastNet2]: Invalid type of player.",
+		2,
+		nil,
+		Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)
+	)
 	local _currentIdentifier: Tany = _toSend[self.remoteName]
 	if IsExist(self.remoteName) and _currentIdentifier then
 		if not _signals[self.remoteName] then
@@ -448,7 +463,7 @@ end
 function Server.wait(self: Server): number
 	return self.Wait(self)
 end
-function Server.Listen(self: Server, waitTill: boolean | any, callback: (...any) -> ()): Tany
+function Server.Listen(self: Server, waitTill: boolean | any, callback: (...any) -> ())
 	if typeof(waitTill) == "boolean" and waitTill == true then
 		if self.__disconnected then
 			self.__disconnected = false
@@ -465,11 +480,13 @@ function Server.Listen(self: Server, waitTill: boolean | any, callback: (...any)
 		}
 	end
 	__callbacks[self.remoteName]["_type"] = __nets[self.remoteName]._type
-	if not table.isfrozen(self) then
-		return table.freeze(self)
-	else
-		return self
+	local private = {}
+	function private.middleware(before: (Player) -> (), after: (Player) -> ())
+		if self and __callbacks[self.remoteName] then
+			__callbacks[self.remoteName]["_middleware"] = { before = before, after = after }
+		end
 	end
+	return private
 end
 function Server.listen(self: Server, waitTill: boolean | any, callback: any): Tany
 	return self.Listen(self, waitTill, callback)
@@ -491,7 +508,16 @@ function Server.Disconnect(self: Server, message: string?)
 			Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
 		end
 	elseif self then
-		Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)), 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+		Debug.__direct_debug(
+			1 ~= 1,
+			string.format(
+				"[FastNet2]: Unable to disconnect -> %s",
+				Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)
+			),
+			2,
+			nil,
+			Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)
+		)
 	end
 end
 function Server.disconnect(self: Server, message: string?)
@@ -603,7 +629,7 @@ end
 function Client.wait(self: Client): number
 	return self.Wait(self)
 end
-function Client.Listen(self: Client, waitTill: boolean | any, callback: (...any) -> ()): Tany
+function Client.Listen(self: Client, waitTill: boolean | any, callback: (...any) -> ())
 	if typeof(waitTill) == "boolean" and waitTill == true then
 		if self.__disconnected then
 			self.__disconnected = false
@@ -620,11 +646,13 @@ function Client.Listen(self: Client, waitTill: boolean | any, callback: (...any)
 		}
 	end
 	__callbacks[self.remoteName]["_type"] = __nets[self.remoteName]._type
-	if not table.isfrozen(self) then
-		return table.freeze(self)
-	else
-		return self
+	local private = {}
+	function private.middleware(before: () -> (), after: () -> ())
+		if self and __callbacks[self.remoteName] then
+			__callbacks[self.remoteName]["_middleware"] = { before = before, after = after }
+		end
 	end
+	return private
 end
 function Client.listen(self: Client, waitTill: boolean | any, callback: any): Tany
 	return self.Listen(self, waitTill, callback)
@@ -646,7 +674,16 @@ function Client.Disconnect(self: Client, message: string?)
 			Debug.__direct_debug(message:len() <= 0, "[FastNet2]: " .. message, 2)
 		end
 	elseif self then
-		Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to disconnect -> %s", Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)), 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName))
+		Debug.__direct_debug(
+			1 ~= 1,
+			string.format(
+				"[FastNet2]: Unable to disconnect -> %s",
+				Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)
+			),
+			2,
+			nil,
+			Driver.dec(FastNet2.Settings.useb64 or false, self.remoteName)
+		)
 	end
 end
 function Client.disconnect(self: Client, message: string?)
@@ -739,7 +776,13 @@ end
 function FastNet2:Get(remoteName: string, waitFor: number?)
 	Debug.__direct_debug(typeof(remoteName) == "string", "[FastNet2]: Invalid type of remote name", 3, 2, remoteName)
 	remoteName = Driver.enc(FastNet2.Settings.useb64 or false, remoteName)
-	Debug.__direct_debug(__nets[remoteName] ~= nil, "[FastNet2]: Remote not found, Require :Create first.", 2, nil, Driver.dec(FastNet2.Settings.useb64 or false, remoteName))
+	Debug.__direct_debug(
+		__nets[remoteName] ~= nil,
+		"[FastNet2]: Remote not found, Require :Create first.",
+		2,
+		nil,
+		Driver.dec(FastNet2.Settings.useb64 or false, remoteName)
+	)
 	if waitFor and typeof(waitFor) == "number" then
 		if waitFor < 5 then
 			waitFor = 5
@@ -758,7 +801,11 @@ function FastNet2:Get(remoteName: string, waitFor: number?)
 			if (tick() - _t) >= waitFor and not finish then
 				finish = true
 				task.cancel(_yield)
-				Debug.__direct_debug(1 ~= 1, string.format("[FastNet2]: Unable to retrieve %s (timed-out yield)", remoteName), 2)
+				Debug.__direct_debug(
+					1 ~= 1,
+					string.format("[FastNet2]: Unable to retrieve %s (timed-out yield)", remoteName),
+					2
+				)
 				break
 			end
 			task.wait()
@@ -810,7 +857,6 @@ function FastNet2:Create(remoteName: string, typeRemote: string)
 					_type = "rf",
 					name = enc_name,
 				}
-				-- Debug.__direct_debug(1 ~= 1, "[FastNet2]: RemoteFunction features is currently not available.", 2)
 			end
 		end
 	end
@@ -841,38 +887,13 @@ if IsServer then
 						and __callbacks[identifier] ~= nil
 						and __callbacks[identifier]["func"] ~= nil
 					then
-						local to_returns_invoke: any = {} -- middleware
+						local to_returns_invoke: any = {}
 						for index, data in v do
 							if __callbacks[identifier] ~= nil then
 								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
 									local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
 									table.insert(to_returns_invoke, { data[1], { _call } })
 								elseif typeof(data[1]) == "table" then
-									-- if plr and waitPlr and PlayerStatus[plr.Name] == true then
-									-- 	if __callbacks[identifier] ~= nil then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	end
-									-- elseif plr and waitPlr then
-									-- 	table.insert(_onHold[plr.Name], data)
-									-- elseif not waitPlr then
-									-- 	if __callbacks[identifier] ~= nil then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	end
-									-- end
 									if __callbacks[identifier] ~= nil then
 										if FastNet2.Settings._enableEncoding and typeof(data) == "table" then
 											for indexs, to_encode in data do
@@ -910,6 +931,13 @@ if IsServer then
 													end
 												end
 												Threads(__callbacks[identifier]["func"], plr, table.unpack(datas or {}))
+												if
+													__callbacks[identifier]["_middleware"]
+													and typeof(__callbacks[identifier]["_middleware"]["after"])
+													== "function"
+												then
+													Threads(__callbacks[identifier]["_middleware"]["after"], plr)
+												end
 											else
 												v[_index] = nil
 											end
@@ -935,34 +963,18 @@ if IsServer then
 												end
 											end
 											Threads(__callbacks[identifier]["func"], plr, table.unpack(_cb or {}))
+											if
+												__callbacks[identifier]["_middleware"]
+												and typeof(__callbacks[identifier]["_middleware"]["after"])
+												== "function"
+											then
+												Threads(__callbacks[identifier]["_middleware"]["after"], plr)
+											end
 										else
 											v[_index] = nil
 										end
 									end
 								else
-									-- if __callbacks[identifier] ~= nil then
-									-- 	if plr and waitPlr and PlayerStatus[plr.Name] == true then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	elseif plr and waitPlr then
-									-- 		table.insert(_onHold[plr.Name], data)
-									-- 	elseif not waitPlr then
-									-- 		if _enableEncoding then
-									-- 			if typeof(data) == "table" then
-									-- 				for indexs, to_encode in data do
-									-- 					data[indexs] = Driver.dec(useb64 or false, to_encode)
-									-- 				end
-									-- 			end
-									-- 		end
-									-- 		Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
-									-- 	end
-									-- end
 									if __callbacks[identifier] ~= nil then
 										if FastNet2.Settings._enableEncoding and typeof(data) == "table" then
 											for indexs, to_encode in data do
@@ -970,12 +982,18 @@ if IsServer then
 											end
 										end
 										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+										if
+											__callbacks[identifier]["_middleware"]
+											and typeof(__callbacks[identifier]["_middleware"]["after"])
+											== "function"
+										then
+											Threads(__callbacks[identifier]["_middleware"]["after"], plr)
+										end
 									end
 								end
 								if
 									__callbacks[identifier]
-									and
-									__callbacks[identifier]["_once"] ~= nil
+									and __callbacks[identifier]["_once"] ~= nil
 									and __callbacks[identifier]["_once"] == true
 								then
 									__callbacks[identifier] = nil
@@ -986,17 +1004,6 @@ if IsServer then
 							table.insert(_toSend[identifier], { plr, to_returns_invoke })
 							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
-						--task.spawn(function()
-						--	if _signals[identifier] then
-						--		debug.profilebegin("signal")
-						--		for i, _call in _signals[identifier] do
-						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-						--				task.spawn(_call)
-						--			end
-						--		end
-						--		debug.profileend()
-						--	end
-						--end)
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
 					then
@@ -1010,17 +1017,6 @@ if IsServer then
 								Threads(_signals[identifier]["_invokeSignal" .. datas[1]], table.unpack(datas[2] or {}))
 							end
 						end
-						--task.spawn(function()
-						--	if _signals[identifier] then
-						--		debug.profilebegin("signal")
-						--		for i, _call in _signals[identifier] do
-						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-						--				task.spawn(_call)
-						--			end
-						--		end
-						--		debug.profileend()
-						--	end
-						--end)
 					end
 				end
 			end
@@ -1040,7 +1036,7 @@ elseif IsClient then
 						and __callbacks[identifier] ~= nil
 						and __callbacks[identifier]["func"] ~= nil
 					then
-						local to_returns_invoke: any = {} -- middleware
+						local to_returns_invoke: any = {}
 						for index, data in _data do
 							if __callbacks[identifier] ~= nil then
 								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
@@ -1049,6 +1045,13 @@ elseif IsClient then
 								elseif typeof(data[1]) == "table" then
 									if __callbacks[identifier] ~= nil then
 										Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+										if
+											__callbacks[identifier]["_middleware"]
+											and typeof(__callbacks[identifier]["_middleware"]["after"])
+											== "function"
+										then
+											Threads(__callbacks[identifier]["_middleware"]["after"])
+										end
 									end
 									for _index, datas in table.unpack(_data) do
 										if
@@ -1076,11 +1079,16 @@ elseif IsClient then
 									end
 								else
 									Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+									if
+										__callbacks[identifier]["_middleware"]
+										and typeof(__callbacks[identifier]["_middleware"]["after"]) == "function"
+									then
+										Threads(__callbacks[identifier]["_middleware"]["after"])
+									end
 								end
 								if
 									__callbacks[identifier]
-									and
-									__callbacks[identifier]["_once"] ~= nil
+									and __callbacks[identifier]["_once"] ~= nil
 									and __callbacks[identifier]["_once"] == true
 								then
 									__callbacks[identifier] = nil
@@ -1091,17 +1099,6 @@ elseif IsClient then
 							table.insert(_toSend[identifier], to_returns_invoke)
 							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
-						--task.spawn(function()
-						--	if _signals[identifier] then
-						--		debug.profilebegin("signal")
-						--		for i, _call in _signals[identifier] do
-						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-						--				task.spawn(_call)
-						--			end
-						--		end
-						--		debug.profileend()
-						--	end
-						--end)
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
 					then
@@ -1125,17 +1122,6 @@ elseif IsClient then
 								end
 							end
 						end
-						--task.spawn(function()
-						--	if _signals[identifier] then
-						--		debug.profilebegin("signal")
-						--		for i, _call in _signals[identifier] do
-						--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-						--				task.spawn(_call)
-						--			end
-						--		end
-						--		debug.profileend()
-						--	end
-						--end)
 					end
 				end
 			end
@@ -1175,6 +1161,13 @@ RunService.PostSimulation:Connect(function()
 									else
 										if __callbacks[identifier] ~= nil then
 											Threads(__callbacks[identifier]["func"], table.unpack(data or {}))
+											if
+												__callbacks[identifier]["_middleware"]
+												and typeof(__callbacks[identifier]["_middleware"]["after"])
+												== "function"
+											then
+												Threads(__callbacks[identifier]["_middleware"]["after"])
+											end
 										else
 											for index, datas in table.unpack(_data) do
 												if
@@ -1193,8 +1186,7 @@ RunService.PostSimulation:Connect(function()
 									end
 									if
 										__callbacks[identifier]
-										and
-										__callbacks[identifier]["_once"] ~= nil
+										and __callbacks[identifier]["_once"] ~= nil
 										and __callbacks[identifier]["_once"] == true
 									then
 										__callbacks[identifier] = nil
@@ -1237,6 +1229,13 @@ RunService.PostSimulation:Connect(function()
 									and player
 									and Players[player]
 								then
+									if
+										__callbacks[identifier]
+										and __callbacks[identifier]["_middleware"]
+										and typeof(__callbacks[identifier]["_middleware"]["before"]) == "function"
+									then
+										Threads(__callbacks[identifier]["_middleware"]["before"], player)
+									end
 									if FastNet2.Settings.waitPlr and PlayerStatus[player] == true then
 										_NetEvent:FireClient(Players[player], { [identifier] = _data })
 									elseif not FastNet2.Settings.waitPlr then
@@ -1254,7 +1253,7 @@ RunService.PostSimulation:Connect(function()
 		local to_send: Tany = {
 			["Server"] = {},
 			["Client"] = {},
-		} -- middleware
+		}
 		local __reach_s_max: boolean = false
 		local __reach_c_max: boolean = false
 		local __Sindex: any = 0
@@ -1304,9 +1303,11 @@ RunService.PostSimulation:Connect(function()
 					__Cindex += 1
 					_wipeIdentifier(identifier)
 					if _signals[identifier] then
+						debug.profilebegin("FastNet2.signal." .. identifier)
 						for __, _s in _signals[identifier] do
 							Threads(_s)
 						end
+						debug.profileend()
 					end
 				end
 			elseif IsServer then -- is server
@@ -1346,9 +1347,18 @@ RunService.PostSimulation:Connect(function()
 									table.insert(to_send_to_client[identifier][data[1]], data[2])
 									to_send_indexs += 1
 									if _signals[identifier] then
+										debug.profilebegin("FastNet2.signal." .. identifier)
 										for __, _s in _signals[identifier] do
 											Threads(_s)
 										end
+										debug.profileend()
+									end
+									if
+										__callbacks[identifier]
+										and __callbacks[identifier]["_middleware"]
+										and typeof(__callbacks[identifier]["_middleware"]["before"]) == "function"
+									then
+										Threads(__callbacks[identifier]["_middleware"]["before"])
 									end
 								end
 							else
@@ -1358,9 +1368,18 @@ RunService.PostSimulation:Connect(function()
 								table.insert(to_send_all_clients[identifier], data[2])
 								to_send_all_indexs += 1
 								if _signals[identifier] then
+									debug.profilebegin("FastNet2.signal." .. identifier)
 									for __, _s in _signals[identifier] do
 										Threads(_s)
 									end
+									debug.profileend()
+								end
+								if
+									__callbacks[identifier]
+									and __callbacks[identifier]["_middleware"]
+									and typeof(__callbacks[identifier]["_middleware"]["before"]) == "function"
+								then
+									Threads(__callbacks[identifier]["_middleware"]["before"])
 								end
 							end
 						end
@@ -1383,8 +1402,24 @@ RunService.PostSimulation:Connect(function()
 								-- _convert[identifier] = _data
 								task.spawn(function()
 									if player and FastNet2.Settings.waitPlr and PlayerStatus[player.Name] == true then
+										if
+											__callbacks[identifier]
+											and __callbacks[identifier]["_middleware"]
+											and typeof(__callbacks[identifier]["_middleware"]["before"])
+											== "function"
+										then
+											Threads(__callbacks[identifier]["_middleware"]["before"], player)
+										end
 										_NetEvent:FireClient(player, { [identifier] = _data })
 									elseif player and not FastNet2.Settings.waitPlr then
+										if
+											__callbacks[identifier]
+											and __callbacks[identifier]["_middleware"]
+											and typeof(__callbacks[identifier]["_middleware"]["before"])
+											== "function"
+										then
+											Threads(__callbacks[identifier]["_middleware"]["before"], player)
+										end
 										_NetEvent:FireClient(player, { [identifier] = _data })
 									elseif player then
 										if not _onHold[player.Name] then
@@ -1417,7 +1452,9 @@ RunService.PostSimulation:Connect(function()
 end)
 
 if IsServer and FastNet2.Settings.waitPlr then
-	repeat task.wait() until #Players:GetPlayers() > 0
+	repeat
+		task.wait()
+	until #Players:GetPlayers() > 0
 	for i, player in pairs(Players:GetPlayers()) do
 		task.spawn(_loadPlrStatus, player)
 	end
