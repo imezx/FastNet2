@@ -29,8 +29,8 @@ https://wally.run/package/imezx/fastnet2
 # * FastNet2 - REvents
 # FastNet2Remote:Listen(waitTill: boolean | any, callback: any): never
 -> Connect/Listen to the remote connection receiver
-# FastNet2Remote:Disconenct(messageOutput: string): undefined
--> Disconenct currently connected remote, messageOutput print-out when disconnected
+# FastNet2Remote:Disconnect(messageOutput: string): undefined
+-> Disconnect currently connected remote, messageOutput print-out when disconnected
 # FastNet2Remote:Destroy()
 -> Destroy & Disconnect the remote
 # FastNet2Remote:Wait(): number
