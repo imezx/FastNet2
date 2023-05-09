@@ -27,8 +27,9 @@ assert(
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = "0.0.8"
-FastNet2.build = 8.5
+FastNet2.build = 8.6
 FastNet2.production = "Dev"
+FastNet2.SignalBehavior = "Default" -- Use roblox signalbehavior (default & deferred), default
 -- Internal Settings
 FastNet2.Settings = {
 	["CHECK_VERSION"] = true, -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
@@ -45,6 +46,16 @@ FastNet2.Settings = {
 
 local __load_s: any = tick()
 
+-- Detect Deferred SignalBehavior
+function SignalBehavior_Deferred(): boolean -- Credit: xKiiyoko
+	local isDeferred = true
+	local bind = Instance.new("BindableEvent")
+	bind.Event:Once(function() isDeferred = false end)
+	bind:Fire()
+	bind:Destroy()
+	return isDeferred
+end
+
 if typeof(FastNet2.Settings.SILENT_DEBUG) ~= "boolean" then
 	FastNet2.Settings.SILENT_DEBUG = false
 end
@@ -58,7 +69,7 @@ if typeof(FastNet2.Settings.useb64) ~= "boolean" then
 	FastNet2.Settings.useb64 = false
 end
 
-FastNet2.Settings.smooth_mode = 1 / (math.min(17, FastNet2.Settings.smooth_mode or 2) * 30) - 0.00015
+FastNet2.Settings.smooth_mode = 1 / (math.min(17, math.max(1, FastNet2.Settings.smooth_mode) or 2) * 30) - 0.00015
 
 if
 	FastNet2.Settings._maxRate_perEvent ~= nil
@@ -733,6 +744,10 @@ function FastNet2.toBestFormNum(num: number): number | string
 	return Driver.toBestFormNum(num)
 end
 
+function FastNet2.getSignalBehavior(): string
+	return SignalBehavior_Deferred() and "Deferred" or "Default"
+end
+
 function FastNet2.delta(convert: boolean?)
 	if convert then
 		return (1 / RunService.Heartbeat:Wait())
@@ -811,7 +826,6 @@ function FastNet2:Get(remoteName: string, waitFor: number?)
 			task.wait()
 		end
 	end
-	_createSignal(remoteName)
 	_createIdentifier(remoteName)
 	if IsClient then
 		return Client.new(remoteName, __nets[remoteName]._type)
@@ -868,12 +882,13 @@ function FastNet2:create(remoteName: string, typeRemote: string): Tany
 end
 
 debug.setmemorycategory("FastNet2")
+local FastNetConnection: RBXScriptConnection
 if IsServer then
 	function FastNet2._setdebug(silent: boolean)
 		Debug.__direct_debug(typeof(silent) == "boolean", "[FastNet2]: Invalid type of debug option", 2)
 		Debug.silentDebug(silent)
 	end
-	_NetEvent.OnServerEvent:Connect(function(plr, pkg)
+	FastNetConnection = _NetEvent.OnServerEvent:Connect(function(plr, pkg)
 		if pkg and typeof(pkg) == "table" then
 			debug.profilebegin("FastNet2.server")
 			for identifier: string, v in pkg do
@@ -1024,8 +1039,9 @@ if IsServer then
 			table.clear(pkg) -- prevent memory leaks?
 		end
 	end)
+	
 elseif IsClient then
-	_NetEvent.OnClientEvent:Connect(function(pkg)
+	FastNetConnection = _NetEvent.OnClientEvent:Connect(function(pkg)
 		if pkg and typeof(pkg) == "table" then
 			debug.profilebegin("FastNet2.client")
 			for identifier: string, _data in pkg do
@@ -1129,6 +1145,12 @@ elseif IsClient then
 			table.clear(pkg) -- prevent memory leaks?
 		end
 	end)
+end
+
+if FastNetConnection and typeof(FastNetConnection) == "RBXScriptConnection" and not FastNetConnection.Connected then
+	error("[FastNet2]: Unable to initialize (Unable to Connect FastNet2 receiver point)", 3)
+	return {}
+	-- end service
 end
 
 -- Internal Events Handler
@@ -1460,6 +1482,11 @@ if IsServer and FastNet2.Settings.waitPlr then
 	end
 end
 
+FastNet2.SignalBehavior = "Default"
+if isDeferred then
+	FastNet2.SignalBehavior = "Deferred"
+	warn("[!]: Deferred SignalBehavior detected, warn: FastNet2 currently not fully support to deferred signalbehavior option.")
+end
 reConfigure()
 
 Debug.__direct_debug(
