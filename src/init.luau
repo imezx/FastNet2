@@ -47,8 +47,8 @@ FastNet2.Settings = {
 local __load_s: any = tick()
 
 -- Detect Deferred SignalBehavior
+local isDeferred = true
 function SignalBehavior_Deferred(): boolean -- Credit: xKiiyoko
-	local isDeferred = true
 	local bind = Instance.new("BindableEvent")
 	bind.Event:Once(function() isDeferred = false end)
 	bind:Fire()
@@ -916,8 +916,9 @@ if IsServer then
 											end
 										end
 										Threads(__callbacks[identifier]["func"], plr, table.unpack(data or {}))
+										v[index] = nil
 									end
-									for _index, datas in table.unpack(v) do
+									for _index, datas in table.unpack(v) or {} do
 										if
 											typeof(_index) == "number"
 											and typeof(datas) == "table"
@@ -953,8 +954,6 @@ if IsServer then
 												then
 													Threads(__callbacks[identifier]["_middleware"]["after"], plr)
 												end
-											else
-												v[_index] = nil
 											end
 										elseif
 											plr
@@ -985,9 +984,9 @@ if IsServer then
 											then
 												Threads(__callbacks[identifier]["_middleware"]["after"], plr)
 											end
-										else
-											v[_index] = nil
+											table.clear(_cb)
 										end
+										v[_index] = nil
 									end
 								else
 									if __callbacks[identifier] ~= nil then
@@ -1004,6 +1003,7 @@ if IsServer then
 										then
 											Threads(__callbacks[identifier]["_middleware"]["after"], plr)
 										end
+										v[index] = nil
 									end
 								end
 								if
@@ -1022,7 +1022,7 @@ if IsServer then
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
 					then
-						for index, datas in table.unpack(v) do
+						for index, datas in table.unpack(v) or {} do
 							if
 								typeof(index) == "number"
 								and typeof(datas) == "table"
@@ -1068,8 +1068,9 @@ elseif IsClient then
 										then
 											Threads(__callbacks[identifier]["_middleware"]["after"])
 										end
+										_data[index] = nil
 									end
-									for _index, datas in table.unpack(_data) do
+									for _index, datas in table.unpack(_data) or {} do
 										if
 											typeof(_index) == "number"
 											and typeof(datas) == "table"
@@ -1101,6 +1102,7 @@ elseif IsClient then
 									then
 										Threads(__callbacks[identifier]["_middleware"]["after"])
 									end
+									_data[index] = nil
 								end
 								if
 									__callbacks[identifier]
@@ -1118,7 +1120,7 @@ elseif IsClient then
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
 					then
-						for index, datas in table.unpack(_data) do
+						for index, datas in table.unpack(_data) or {} do
 							if typeof(index) == "number" and typeof(datas) == "table" and datas[1] ~= nil then
 								if typeof(datas[1]) == "number" or typeof(datas[1]) == "string" then
 									if
@@ -1190,19 +1192,19 @@ RunService.PostSimulation:Connect(function()
 											then
 												Threads(__callbacks[identifier]["_middleware"]["after"])
 											end
-										else
-											for index, datas in table.unpack(_data) do
-												if
-													typeof(index) == "number"
-													and typeof(datas) == "table"
-													and _signals[identifier] ~= nil
-													and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
-												then
-													Threads(
-														_signals[identifier]["_invokeSignal" .. datas[1]],
-														table.unpack(datas[2] or {})
-													)
-												end
+											_data[index] = nil
+										end
+										for index, datas in table.unpack(_data) or {} do
+											if
+												typeof(index) == "number"
+												and typeof(datas) == "table"
+												and _signals[identifier] ~= nil
+												and _signals[identifier]["_invokeSignal" .. datas[1]] ~= nil
+											then
+												Threads(
+													_signals[identifier]["_invokeSignal" .. datas[1]],
+													table.unpack(datas[2] or {})
+												)
 											end
 										end
 									end
@@ -1216,18 +1218,6 @@ RunService.PostSimulation:Connect(function()
 									table.remove(_data, index)
 								end
 							end
-							--task.spawn(function()
-							--	if _toSend[identifier] and #to_returns_invoke > 0 then
-							--		table.insert(_toSend[identifier], to_returns_invoke)
-							--	end
-							--	if _signals[identifier] then
-							--		for i, _call in _signals[identifier] do
-							--			if typeof(i) == "string" and i:sub(1, 7) == "_signal" then
-							--				task.spawn(_call)
-							--			end
-							--		end
-							--	end
-							--end)
 						end
 					end
 				end
@@ -1263,7 +1253,7 @@ RunService.PostSimulation:Connect(function()
 									elseif not FastNet2.Settings.waitPlr then
 										_NetEvent:FireClient(Players[player], { [identifier] = _data })
 									end
-									table.remove(datas, index)
+									datas[index] = nil
 								end
 							end
 						end
