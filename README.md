@@ -1,5 +1,5 @@
-# FastNet2 - a Incredible and Powerful Networking Module
-Next-gen of FastNet & Networking Module
+# FastNet2 - a Fastest & Powerful Networking Module
+a Powerful & Fastest Networking module made for ROBLOX Platform
 
 # Wally Support
 > https://wally.run/package/imezx/fastnet2
