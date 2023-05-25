@@ -25,8 +25,7 @@ end
 
 function direct_debug(c: any, m: string, l: number, l2: number?, l3: string?): boolean
 	if not silentDebug then
-		local lv: any = l or 2
-		lv = levels[lv] or levels[2]
+		local lv: any = levels[lv] or levels[2]
 		if lv == 3 then
 			if not (c) then lv(m, l2 or 2) elseif (c) == false then lv(m, l2 or 2) end
 		else
