@@ -20,7 +20,6 @@ end
 
 function Driver.Nearest(player: Player, radiusDist: any, customCharacter: boolean?): {[string]: number}
 	local InNearest: any = {}
-	radiusDist = tonumber(radiusDist)
 	assert(typeof(radiusDist) == "number", "Invalid argument radiusDist")
 	assert(radiusDist > 0 , "Minimum argument radiusDist is > 0")
 	if player and #Players:GetPlayers() > 0 then
@@ -77,12 +76,12 @@ local t = os.clock()
 -- benchmark (9k loops total)
 for i=1,1500 do
 	for i=1,6 do
-		x.dec(false, x.enc(falsem m..i))
+		x.dec(false, x.enc(false, m))
 	end
 end
 print(os.clock() - t)
 
--- only took 0.000169s - 0.000378s for once encode & decode binary
+-- only took 0.000169s - 0.000378s for once encode & decode binary (depending their device)
 code:
 local m = "abcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_-+=,./?';:]}[{\|~`"
 local t = os.clock()
