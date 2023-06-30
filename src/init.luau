@@ -32,8 +32,8 @@ FastNet2.production = "Dev"
 FastNet2.SignalBehavior = "Default" -- Use roblox signalbehavior (default & deferred), default
 -- Internal Settings
 FastNet2.Settings = {
-	["CHECK_VERSION"] = true, -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
-	["_enableLimitingRate"] = false, -- default: true, off it if want pure or for benchmarking
+	["CHECK_VERSION"] = false, -- default: true, check current and latest version available >> (SERVER-SIDE ONLY!) <<
+	["_enableLimitingRate"] = true, -- default: true, off it if want pure or for benchmarking
 	["_maxRate_perEvent"] = 500, -- default: 500
 	["__threads"] = 50, -- default: 50
 	["__currentMode"] = 2, -- default: 2 (1-3)
@@ -433,7 +433,7 @@ function Server.Pull(self: Server, player: Player, timeout: number, ...: any): a
 			timeout = 5
 		end
 		local finish, _t, toreturn = false, tick(), nil
-		local _makeId = _createId()
+		local _makeId = randNum(8, 16)
 		local tosend: any = { ... }
 		_signals[self.remoteName]["_invokeSignal" .. _makeId] = function(...)
 			finish = true
@@ -599,7 +599,7 @@ function Client.Pull(self: Client, timeout: number, ...: any): any?
 			timeout = 5
 		end
 		local finish, _t, toreturn = false, tick(), nil
-		local _makeId = _createId()
+		local _makeId = randNum(8, 16)
 		local tosend: any = { ... }
 		_signals[self.remoteName]["_invokeSignal" .. _makeId] = function(...)
 			finish = true
@@ -905,7 +905,7 @@ if IsServer then
 						local to_returns_invoke: any = {}
 						for index, data in v do
 							if __callbacks[identifier] ~= nil then
-								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+								if typeof(data) == "table" and typeof(data[1]) == "number" then
 									local _call = __callbacks[identifier]["func"](plr, table.unpack(data[2] or {}))
 									table.insert(to_returns_invoke, { data[1], { _call } })
 								elseif typeof(data[1]) == "table" then
@@ -1017,7 +1017,6 @@ if IsServer then
 						end
 						if _toSend[identifier] and #to_returns_invoke > 0 then
 							table.insert(_toSend[identifier], { plr, to_returns_invoke })
-							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
@@ -1039,7 +1038,7 @@ if IsServer then
 			table.clear(pkg) -- prevent memory leaks?
 		end
 	end)
-	
+
 elseif IsClient then
 	FastNetConnection = _NetEvent.OnClientEvent:Connect(function(pkg)
 		if pkg and typeof(pkg) == "table" then
@@ -1055,7 +1054,7 @@ elseif IsClient then
 						local to_returns_invoke: any = {}
 						for index, data in _data do
 							if __callbacks[identifier] ~= nil then
-								if typeof(data) == "table" and typeof(data[1]) == "number" and _signals[identifier] then
+								if typeof(data) == "table" and typeof(data[1]) == "number" then
 									local _call = __callbacks[identifier]["func"](table.unpack(data[2] or {}))
 									table.insert(to_returns_invoke, { data[1], { _call } })
 								elseif typeof(data[1]) == "table" then
@@ -1115,7 +1114,6 @@ elseif IsClient then
 						end
 						if #to_returns_invoke > 0 then
 							table.insert(_toSend[identifier], to_returns_invoke)
-							table.clear(to_returns_invoke) -- prevent memory leaks?
 						end
 					elseif -- invoke response
 						_findIdentifier(identifier) and IsExist(identifier)
@@ -1317,7 +1315,9 @@ RunService.PostSimulation:Connect(function()
 					if _signals[identifier] then
 						debug.profilebegin("FastNet2.signal." .. identifier)
 						for __, _s in _signals[identifier] do
-							Threads(_s)
+							if string.sub(__, 1, 13) ~= "_invokeSignal" then
+								Threads(_s)
+							end
 						end
 						debug.profileend()
 					end
@@ -1361,7 +1361,9 @@ RunService.PostSimulation:Connect(function()
 									if _signals[identifier] then
 										debug.profilebegin("FastNet2.signal." .. identifier)
 										for __, _s in _signals[identifier] do
-											Threads(_s)
+											if string.sub(__, 1, 13) ~= "_invokeSignal" then
+												Threads(_s)
+											end
 										end
 										debug.profileend()
 									end
@@ -1382,7 +1384,9 @@ RunService.PostSimulation:Connect(function()
 								if _signals[identifier] then
 									debug.profilebegin("FastNet2.signal." .. identifier)
 									for __, _s in _signals[identifier] do
-										Threads(_s)
+										if string.sub(__, 1, 13) ~= "_invokeSignal" then
+											Threads(_s)
+										end
 									end
 									debug.profileend()
 								end
