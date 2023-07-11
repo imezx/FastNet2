@@ -23,8 +23,8 @@ a Powerful & Fastest Networking module made for ROBLOX Platform
 - .delta()
 
 # * FastNet2 - RFunctions
-- Remote:Disconenct(messageOutput: string): undefined
--> Disconenct currently connected remote, messageOutput print-out when disconnected
+- Remote:Disconnect(messageOutput: string): undefined
+-> Disconnect currently connected remote, messageOutput print-out when disconnected
 
 # * FastNet2 - REvents
 - Remote:Listen(waitTill: boolean | any, callback: any): never
