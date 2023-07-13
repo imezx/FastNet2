@@ -3,6 +3,9 @@
 [Refresh]
 - Reupdate existing version
 
+[RC1]
+- Rewrite
+
 [0.0.8]
 - Hold Connection (Experimental)
 
