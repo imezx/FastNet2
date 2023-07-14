@@ -3,6 +3,10 @@
 [Refresh]
 - Reupdate existing version
 
+[RC2]
+- RemoteFunction / Pull implementation
+- Fixes
+
 [RC1]
 - Rewrite
 
