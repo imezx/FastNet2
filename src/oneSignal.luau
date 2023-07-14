@@ -8,7 +8,9 @@ oneSignal.__index = oneSignal
 
 local Collections = {}
 
-function oneSignal.new(identifier)
+local Types = require(script.Parent.Types)
+
+function oneSignal.new(identifier: string)
 	assert(typeof(identifier) == "string", "[oneSignal]: Identifier must be string")
 	assert(not Collections[identifier], string.format("[oneSignal]: %s already exist", identifier))
 	Collections[identifier] = setmetatable({
@@ -20,12 +22,12 @@ function oneSignal.new(identifier)
 	return Collections[identifier]
 end
 
-function oneSignal.get(identifier)
+function oneSignal.get(identifier: string)
 	assert(Collections[identifier], string.format("[oneSignal]: %s not exist", identifier))
 	return Collections[identifier]
 end
 
-function oneSignal:Connect(callback)
+function oneSignal:Connect(callback: Types.callback)
 	if self then
 		assert(not self.Connected, string.format("[oneSignal]: %s already connected", self.Identifier))
 		self.cb = callback
@@ -33,19 +35,19 @@ function oneSignal:Connect(callback)
 	end
 end
 
-function oneSignal:Wait()
+function oneSignal:Wait(): number
 	if self then
 		local thread = coroutine.running()
 		local clock = os.clock()
 		self._ping = function(x)
-			task.spawn(thread, x - clock)
 			self._ping = nil
+			task.spawn(thread, x - clock)
 		end
 		return coroutine.yield()
 	end
 end
 
-function oneSignal:Once(callback)
+function oneSignal:Once(callback: Types.callback)
 	if self and not self.Connected then
 		self.cb = function(...)
 			self:Disconnect()
@@ -70,7 +72,7 @@ function oneSignal:Destroy()
 	end
 end
 
-function oneSignal:Fire(...)
+function oneSignal:Fire(...: any)
 	if self then
 		if self.Connected then
 			task.spawn(self.cb, ...)
