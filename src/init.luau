@@ -4,7 +4,7 @@
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = "rc1"
+FastNet2.version = "rc2"
 
 local RunService = game:GetService("RunService")
 
@@ -15,7 +15,7 @@ end
 local Signal = require(script.oneSignal)
 
 -- Signal (oneSignal, oneSignal.luau)
-function FastNet2.Signal(Identifier: string): (...any)
+function FastNet2.Signal(Identifier: string)
 	local Is, signal = pcall(function()
 		return Signal.new(Identifier)
 	end)
