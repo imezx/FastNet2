@@ -6,6 +6,7 @@ Client.clock = 60
 local Collections = {}
 
 local RunService = game:GetService("RunService")
+
 local FastSpawn = require(script.Parent.FastSpawn)
 local Types = require(script.Parent.Types)
 local Event = script.Parent.Event
@@ -22,6 +23,7 @@ function Client.new(Identifier: string)
 		flag = {},
 		_ping = nil,
 		returnRequest = {},
+		_rate = os.clock(),
 	}, Client)
 	return Collections[Identifier]
 end

@@ -1,12 +1,14 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
+-- version rc3 (0.3)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = "rc2"
+FastNet2.version = 0.3
 
 local RunService = game:GetService("RunService")
+local HttpService = game:GetService("HttpService")
 
 if not script:FindFirstChild("Event") then
 	Instance.new("RemoteEvent", script).Name = "Event"
@@ -23,6 +25,24 @@ function FastNet2.Signal(Identifier: string)
 		return Signal.get(Identifier)
 	end
 	return signal
+end
+
+function FastNet2.CheckUpdate()
+	assert(RunService:IsServer(), "[FastNet2]: Unable to check update due ROBLOX Security.")
+	local success: boolean, receive: number = pcall(function()
+		return tonumber(
+			HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
+		) :: number
+	end)
+	if not success then
+		warn("[FastNet2]: Failed to check update.")
+		return
+	end
+	if receive > FastNet2.version then
+		warn(string.format("[FastNet2]: New Update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
+		return
+	end
+	warn("[FastNet2]: Current FastNet2 module is up-to-date.")
 end
 
 if RunService:IsServer() then
