@@ -3,6 +3,11 @@
 [Refresh]
 - Reupdate existing version
 
+[RC3]
+- [NEW] CheckUpdate (no package update)
+- [FIX] FastSpawn & MultiThread
+- [PRE] RateLimiting
+
 [RC2]
 - RemoteFunction / Pull implementation
 - Fixes
