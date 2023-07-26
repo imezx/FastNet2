@@ -1,4 +1,5 @@
 -- FastSpawn & FreeThreads
+--!strict
 local Threads = {}
 
 local function passer(run, ...)
@@ -16,14 +17,14 @@ local function runner(thread): never
 	end
 end
 
--- Multi-Thread (create 25 threads)
-for i=1, 50 do
+-- Multi-Thread (create 100 threads for multi-threading ready)
+for i=1, 100 do
 	Threads[i] = coroutine.create(runner)
 	coroutine.resume(Threads[i], Threads[i])
 end
 
-return function<_, params>(func: (params) -> (), ...: params): never
-	local thread
+return function<_, params>(func: (params) -> (), ...: params)
+	local thread: any
 	if #Threads > 0 and Threads[#Threads] then
 		thread = Threads[#Threads]
 		Threads[#Threads] = nil

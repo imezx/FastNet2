@@ -87,7 +87,7 @@ function Server:Fire(player: Player, ...: any)
 end
 
 function Server:Fires(...: any)
-	table.insert(self.packets, { ... })
+	self.packets[#self.packets + 1] = { ... }
 end
 
 function Server:Pull(expire: number, player: Player, ...: any)
@@ -103,57 +103,61 @@ function Server:Pull(expire: number, player: Player, ...: any)
 		if self.requests[requestId] then
 			table.remove(self.flag, requestId)
 		end
-		coroutine.resume(thread, nil)
+		coroutine.resume(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
+	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
 		task.cancel(session)
-		coroutine.resume(thread, ...)
+		coroutine.resume(thread, ...) -- resume thread to finish and return data as successed
 	end
+	-- check available request map
 	if not self.requests[player] then
 		self.requests[player] = {}
 	end
+	-- push new request
 	self.requests[player][requestId] = { ... }
-	return coroutine.yield()
+	return coroutine.yield() -- wait for return (yield)
 end
 
 Event.OnServerEvent:Connect(function(player, packets, secondPackets)
-	debug.profilebegin("FastNet2.receive")
-	if typeof(packets) == "table" then
-		for Identifier, packet in packets do
-			if Collections[Identifier] and Collections[Identifier].Connected then
-				for _, data in packet do
-					FastSpawn(Collections[Identifier].func, player, table.unpack(data))
-				end
-			end
-		end
-		table.clear(packets)
-	elseif typeof(packets) == "string" then
-		if packets == "0" then
-			for Identifier, packet in secondPackets do
+	if player and (packets or secondPackets) then
+		debug.profilebegin("FastNet2.receive")
+		if typeof(packets) == "table" then
+			for Identifier, packet in packets do
 				if Collections[Identifier] and Collections[Identifier].Connected then
-					for i, data in packet do
-						if not Collections[Identifier].returnRequest[player.Name] then
-							Collections[Identifier].returnRequest[player.Name] = {}
-						end
-						Collections[Identifier].returnRequest[player.Name][i] = Collections[Identifier].func(player, table.unpack(data))
+					for _, data in packet do
+						FastSpawn(Collections[Identifier].func, player, table.unpack(data))
 					end
 				end
 			end
-		elseif packets == "1" then
-			for Identifier, packet in secondPackets do
-				if Collections[Identifier] then
-					for i, data in packet do
-						if Collections[Identifier].flag[i] then
-							FastSpawn(Collections[Identifier].flag[i], data)
+			table.clear(packets)
+		elseif typeof(packets) == "string" then
+			if packets == "0" then
+				for Identifier, packet in secondPackets do
+					if Collections[Identifier] and Collections[Identifier].Connected then
+						for i, data in packet do
+							if not Collections[Identifier].returnRequest[player.Name] then
+								Collections[Identifier].returnRequest[player.Name] = {}
+							end
+							Collections[Identifier].returnRequest[player.Name][i] = Collections[Identifier].func(player, table.unpack(data))
+						end
+					end
+				end
+			elseif packets == "1" then
+				for Identifier, packet in secondPackets do
+					if Collections[Identifier] then
+						for i, data in packet do
+							if Collections[Identifier].flag[i] then
+								FastSpawn(Collections[Identifier].flag[i], data)
+							end
 						end
 					end
 				end
 			end
+			table.clear(secondPackets)
 		end
-		
-		table.clear(secondPackets)
+		debug.profileend()
 	end
-	debug.profileend()
 end)
 
 local _outQueue, outIndex = {}, 0
@@ -177,7 +181,7 @@ RunService.PostSimulation:Connect(function()
 		-- Single Players to Queue
 		for player, packets in net.single do
 			if #packets > 0 and Players:FindFirstChild(player) then
-				Event:FireClient(Players[player], {[net.Identifier] = table.unpack(packets)})
+				Event:FireClient(Players[player], {[net.Identifier] = packets})
 				table.clear(packets)
 			end
 		end

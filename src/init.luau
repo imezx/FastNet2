@@ -1,7 +1,7 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc3 (0.3)
+-- version rc3 (0.3.1)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
@@ -39,10 +39,10 @@ function FastNet2.CheckUpdate()
 		return
 	end
 	if receive > FastNet2.version then
-		warn(string.format("[FastNet2]: New Update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
+		warn(string.format("[FastNet2]: new update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
 		return
 	end
-	warn("[FastNet2]: Current FastNet2 module is up-to-date.")
+	warn("[FastNet2]: Module is up-to-date.")
 end
 
 if RunService:IsServer() then

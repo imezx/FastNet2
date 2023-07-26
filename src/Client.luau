@@ -11,6 +11,8 @@ local FastSpawn = require(script.Parent.FastSpawn)
 local Types = require(script.Parent.Types)
 local Event = script.Parent.Event
 
+local Outgoing = {}
+
 function Client.new(Identifier: string)
 	assert(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
 	assert(not Collections[Identifier], string.format("[FastNet2]: %s already exist", Identifier))
@@ -18,13 +20,14 @@ function Client.new(Identifier: string)
 		Identifier = Identifier,
 		func = nil,
 		Connected = false,
-		packets = {},
+		--packets = {},
 		requests = {},
 		flag = {},
 		_ping = nil,
 		returnRequest = {},
 		_rate = os.clock(),
 	}, Client)
+	Outgoing[Identifier] = {}
 	return Collections[Identifier]
 end
 
@@ -79,12 +82,12 @@ function Client:Destroy()
 	end
 end
 
-function Client:Fire(...: any)
-	table.insert(self.packets, { ... })
-end
-
 function Client:Fires()
 	warn("[FastNet2]: 'Fires' only can be used on server.")
+end
+
+function Client:Fire(...: any)
+	table.insert(Outgoing[self.Identifier], { ... })
 end
 
 function Client:Pull(expire: number, ...: any)
@@ -100,66 +103,69 @@ function Client:Pull(expire: number, ...: any)
 		if self.requests[requestId] then
 			table.remove(self.flag, requestId)
 		end
-		coroutine.resume(thread, nil)
+		coroutine.resume(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
+	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
 		task.cancel(session)
-		coroutine.resume(thread, ...)
+		coroutine.resume(thread, ...) -- resume thread to finish and return data as successed
 	end
+	-- push new request
 	self.requests[requestId] = { ... }
-	return coroutine.yield()
+	return coroutine.yield() -- wait for return (yield)
 end
 
 Event.OnClientEvent:Connect(function(packets, secondPackets)
-	debug.profilebegin("FastNet2.receive")
-	if typeof(packets) == "table" then
-		for Identifier, packet in packets do
-			if Collections[Identifier] and Collections[Identifier].Connected then
-				for _, data in packet do
-					FastSpawn(Collections[Identifier].func, table.unpack(data))
-				end
-			end
-		end
-		table.clear(packets)
-	elseif typeof(packets) == "string" then
-		if packets == "0" then
-			for Identifier, packet in secondPackets do
+	if packets or secondPackets then
+		debug.profilebegin("FastNet2.receive")
+		if typeof(packets) == "table" then
+			for Identifier, packet in packets do
 				if Collections[Identifier] and Collections[Identifier].Connected then
-					for i, data in packet do
-						Collections[Identifier].returnRequest[i] = Collections[Identifier].func(data)
+					for _, data in packet do
+						FastSpawn(Collections[Identifier].func, table.unpack(data))
 					end
 				end
 			end
-		elseif packets == "1" then
-			for Identifier, packet in secondPackets do
-				if Collections[Identifier] then
-					for i, data in packet do
-						if Collections[Identifier].flag[i] then
-							FastSpawn(Collections[Identifier].flag[i], data)
+			table.clear(packets)
+		elseif typeof(packets) == "string" then
+			if packets == "0" then
+				for Identifier, packet in secondPackets do
+					if Collections[Identifier] and Collections[Identifier].Connected then
+						for i, data in packet do
+							Collections[Identifier].returnRequest[i] = Collections[Identifier].func(data)
+						end
+					end
+				end
+			elseif packets == "1" then
+				for Identifier, packet in secondPackets do
+					if Collections[Identifier] then
+						for i, data in packet do
+							if Collections[Identifier].flag[i] then
+								FastSpawn(Collections[Identifier].flag[i], data)
+							end
 						end
 					end
 				end
 			end
+			table.clear(secondPackets)
 		end
-		table.clear(secondPackets)
+		debug.profileend()
 	end
-	debug.profileend()
 end)
 
-local clock, _outQueue, outIndex = os.clock(), {}, 0
+local clock, outQueue, outIndex = os.clock(), {}, 0
 local inRequestQueue, inRequestIndex = {}, 0
 local throwRequest, throwIndex = {}, 0
 RunService.PostSimulation:Connect(function()
 	if (os.clock() - clock) >= 1/Client.clock - 0.00015 then
 		clock = os.clock()
 		debug.profilebegin("FastNet2.process")
-		
 		for Identifier, net in Collections do
 			-- Packet to Queue
-			if #net.packets > 0 then
-				_outQueue[Identifier] = net.packets
+			if #Outgoing[Identifier] > 0 then
+				outQueue[Identifier] = Outgoing[Identifier]
 				outIndex += 1
-				net.packets = {}
+				Outgoing[Identifier] = {}
 			end
 			-- Request to Queue
 			if #net.requests > 0 then
@@ -180,9 +186,9 @@ RunService.PostSimulation:Connect(function()
 		end
 		-- Sent queues to server
 		if outIndex > 0 then
-			Event:FireServer(_outQueue)
+			Event:FireServer(outQueue)
 			outIndex = 0
-			table.clear(_outQueue)
+			table.clear(outQueue)
 		end
 		if inRequestIndex > 0 then
 			Event:FireServer("0", inRequestQueue)
@@ -194,7 +200,6 @@ RunService.PostSimulation:Connect(function()
 			throwIndex = 0
 			table.clear(throwRequest)
 		end
-
 		debug.profileend()
 	end
 end)
