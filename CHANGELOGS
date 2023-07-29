@@ -3,6 +3,11 @@
 [Refresh]
 - Reupdate existing version
 
+[RC4 - 0.4.0]
+- Few Rewrites (Client & Server)
+- Fixed Server Pull/Invoking
+- Client RateLimit
+
 [RC3 - 0.3.1]
 - Fix Critical server (firing player / single player target)
 - Minor Improvements

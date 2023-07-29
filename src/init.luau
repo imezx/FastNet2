@@ -1,13 +1,13 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc3 (0.3.1)
+-- version rc4 (0.4)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = 0.3
+FastNet2.version = 0.4
 
-local RunService = game:GetService("RunService")
+local IsServer = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
 
 if not script:FindFirstChild("Event") then
@@ -28,7 +28,7 @@ function FastNet2.Signal(Identifier: string)
 end
 
 function FastNet2.CheckUpdate()
-	assert(RunService:IsServer(), "[FastNet2]: Unable to check update due ROBLOX Security.")
+	assert(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.")
 	local success: boolean, receive: number = pcall(function()
 		return tonumber(
 			HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
@@ -45,7 +45,7 @@ function FastNet2.CheckUpdate()
 	warn("[FastNet2]: Module is up-to-date.")
 end
 
-if RunService:IsServer() then
+if IsServer then
 	return setmetatable(FastNet2, require(script.Server))
 end
 return setmetatable(FastNet2, require(script.Client))

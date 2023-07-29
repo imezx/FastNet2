@@ -2,28 +2,23 @@
 local Server = {}
 Server.__index = Server
 
-local Collections = {}
-
-local RunService = game:GetService("RunService")
-local Players = game:GetService("Players")
-
+local Process = require(script.Process)
+local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
 local Types = require(script.Parent.Types)
 local Event = script.Parent.Event
 
+local Collections = {}
+
 function Server.new(Identifier: string)
 	assert(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
-	assert(not Collections[Identifier], string.format("[FastNet2]: %s already exist", Identifier))
+	assert(not Identifiers.find(Identifier), string.format("[FastNet2]: %s already exist", Identifier))
+	Process.reg(Identifier)
 	Collections[Identifier] = setmetatable({
 		Identifier = Identifier,
 		func = nil,
 		Connected = false,
-		packets = {},
-		single = {},
-		requests = {},
 		flag = {},
-		returnRequest = {},
-		_ping = nil,
 	}, Server)
 	return Collections[Identifier]
 end
@@ -44,13 +39,7 @@ end
 
 function Server:Wait()
 	if self then
-		local thread = coroutine.running()
-		local clock = os.clock()
-		self._ping = function(x)
-			self._ping = nil
-			task.spawn(thread, x - clock)
-		end
-		return coroutine.yield()
+		return Process._ping(self.Identifier)
 	end
 end
 
@@ -74,25 +63,23 @@ end
 function Server:Destroy()
 	self:Disconnect()
 	if self then
-		Collections[self.Identifier] = nil
+		Process.unreg(self.Identifier)
 		self = nil
 	end
 end
 
 function Server:Fire(player: Player, ...: any)
-	if not self.single[player.Name] then
-		self.single[player.Name] = {}
-	end
-	table.insert(self.single[player.Name], { ... })
+	Process.s_insert(self.Identifier, player, { ... })
 end
 
 function Server:Fires(...: any)
-	self.packets[#self.packets + 1] = { ... }
+	Process.insert(self.Identifier, { ... })
 end
 
 function Server:Pull(expire: number, player: Player, ...: any)
 	assert(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
 	assert(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
+	assert(player:IsA("Player"), "[FastNet2]: player argument must be a Player.")
 	local thread, requestId = coroutine.running(), (#self.flag + 1)
 	local session = task.delay(expire, function()
 		-- session expire
@@ -100,7 +87,7 @@ function Server:Pull(expire: number, player: Player, ...: any)
 		if self.flag[requestId] then
 			table.remove(self.flag, requestId)
 		end
-		if self.requests[requestId] then
+		if Process.verify(self.Identifier, player, requestId) then
 			table.remove(self.flag, requestId)
 		end
 		coroutine.resume(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
@@ -110,12 +97,8 @@ function Server:Pull(expire: number, player: Player, ...: any)
 		task.cancel(session)
 		coroutine.resume(thread, ...) -- resume thread to finish and return data as successed
 	end
-	-- check available request map
-	if not self.requests[player] then
-		self.requests[player] = {}
-	end
 	-- push new request
-	self.requests[player][requestId] = { ... }
+	Process.newReq(self.Identifier, requestId, player, { ... })
 	return coroutine.yield() -- wait for return (yield)
 end
 
@@ -136,10 +119,7 @@ Event.OnServerEvent:Connect(function(player, packets, secondPackets)
 				for Identifier, packet in secondPackets do
 					if Collections[Identifier] and Collections[Identifier].Connected then
 						for i, data in packet do
-							if not Collections[Identifier].returnRequest[player.Name] then
-								Collections[Identifier].returnRequest[player.Name] = {}
-							end
-							Collections[Identifier].returnRequest[player.Name][i] = Collections[Identifier].func(player, table.unpack(data))
+							Process.pushback(Identifier, player.Name, i, Collections[Identifier].func(player, table.unpack(data)))
 						end
 					end
 				end
@@ -160,51 +140,6 @@ Event.OnServerEvent:Connect(function(player, packets, secondPackets)
 	end
 end)
 
-local _outQueue, outIndex = {}, 0
-RunService.PostSimulation:Connect(function()
-	debug.profilebegin("FastNet2.process")
-	-- Connections Dataset from Collections
-	for Identifier, net in Collections do
-		-- Multiple Players to Queue
-		if #net.packets > 0 then
-			_outQueue[Identifier] = net.packets
-			outIndex += 1
-			net.packets = {}
-		end
-		-- Requests to Queue
-		for player, requests in net.requests do
-			if #requests > 0 then
-				Event:FireClient(player, "0", {[net.Identifier] = table.unpack(requests)})
-				table.clear(requests)
-			end
-		end
-		-- Single Players to Queue
-		for player, packets in net.single do
-			if #packets > 0 and Players:FindFirstChild(player) then
-				Event:FireClient(Players[player], {[net.Identifier] = packets})
-				table.clear(packets)
-			end
-		end
-		-- Return Requests
-		for player, data in net.returnRequest do
-			if #data > 0 and Players:FindFirstChild(player) then
-				Event:FireClient(Players[player], "1", {[net.Identifier] = data})
-				table.clear(data)
-			end
-		end
-		-- Ping :Wait()
-		if net._ping then
-			FastSpawn(net._ping, os.clock())
-		end
-	end
-	-- Sent all data to client (Multiple Players)
-	if outIndex > 0 then
-		Event:FireAllClients(_outQueue)
-		outIndex = 0
-		table.clear(_outQueue)
-	end
-
-	debug.profileend()
-end)
+Process.__start()
 
 return table.freeze(Server)

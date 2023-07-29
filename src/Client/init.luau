@@ -1,33 +1,27 @@
 --FastNet2 (Client)
 local Client = {}
 Client.__index = Client
-Client.clock = 60
-
-local Collections = {}
 
 local RunService = game:GetService("RunService")
 
+local Process = require(script.Process)
+local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
 local Types = require(script.Parent.Types)
 local Event = script.Parent.Event
 
-local Outgoing = {}
+local Collections = {}
 
 function Client.new(Identifier: string)
 	assert(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
-	assert(not Collections[Identifier], string.format("[FastNet2]: %s already exist", Identifier))
+	assert(not Identifiers.find(Identifier), string.format("[FastNet2]: %s already exist", Identifier))
+	Process.reg(Identifier)
 	Collections[Identifier] = setmetatable({
 		Identifier = Identifier,
 		func = nil,
 		Connected = false,
-		--packets = {},
-		requests = {},
 		flag = {},
-		_ping = nil,
-		returnRequest = {},
-		_rate = os.clock(),
 	}, Client)
-	Outgoing[Identifier] = {}
 	return Collections[Identifier]
 end
 
@@ -39,6 +33,14 @@ function Client:Connect(callback: Types.callback)
 	end
 end
 
+function Client:ConnectParallel(callback: Types.callback)
+	if self then
+		task.desynchronize()
+		self:Connect(callback)
+		task.synchronize()
+	end
+end
+
 function Client:Listen(callback: Types.callback)
 	if self then
 		self:Connect(callback)
@@ -47,13 +49,7 @@ end
 
 function Client:Wait(): number
 	if self then
-		local thread = coroutine.running()
-		local clock = os.clock()
-		self._ping = function(x)
-			self._ping = 0
-			task.spawn(thread, x - clock)
-		end
-		return coroutine.yield()
+		return Process._ping(self.Identifier)
 	end
 end
 
@@ -77,7 +73,7 @@ end
 function Client:Destroy()
 	self:Disconnect()
 	if self then
-		Collections[self.Identifier] = nil
+		Process.unreg(self.Identifier)
 		self = nil
 	end
 end
@@ -87,7 +83,7 @@ function Client:Fires()
 end
 
 function Client:Fire(...: any)
-	table.insert(Outgoing[self.Identifier], { ... })
+	Process.insert(self.Identifier, { ... })
 end
 
 function Client:Pull(expire: number, ...: any)
@@ -100,7 +96,7 @@ function Client:Pull(expire: number, ...: any)
 		if self.flag[requestId] then
 			table.remove(self.flag, requestId)
 		end
-		if self.requests[requestId] then
+		if Process.verify(self.Identifier, requestId) then
 			table.remove(self.flag, requestId)
 		end
 		coroutine.resume(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
@@ -111,7 +107,7 @@ function Client:Pull(expire: number, ...: any)
 		coroutine.resume(thread, ...) -- resume thread to finish and return data as successed
 	end
 	-- push new request
-	self.requests[requestId] = { ... }
+	Process.newReq(self.Identifier, requestId, { ... })
 	return coroutine.yield() -- wait for return (yield)
 end
 
@@ -132,7 +128,7 @@ Event.OnClientEvent:Connect(function(packets, secondPackets)
 				for Identifier, packet in secondPackets do
 					if Collections[Identifier] and Collections[Identifier].Connected then
 						for i, data in packet do
-							Collections[Identifier].returnRequest[i] = Collections[Identifier].func(data)
+							Process.pushback(Identifier, i, Collections[Identifier].func(data))
 						end
 					end
 				end
@@ -153,55 +149,6 @@ Event.OnClientEvent:Connect(function(packets, secondPackets)
 	end
 end)
 
-local clock, outQueue, outIndex = os.clock(), {}, 0
-local inRequestQueue, inRequestIndex = {}, 0
-local throwRequest, throwIndex = {}, 0
-RunService.PostSimulation:Connect(function()
-	if (os.clock() - clock) >= 1/Client.clock - 0.00015 then
-		clock = os.clock()
-		debug.profilebegin("FastNet2.process")
-		for Identifier, net in Collections do
-			-- Packet to Queue
-			if #Outgoing[Identifier] > 0 then
-				outQueue[Identifier] = Outgoing[Identifier]
-				outIndex += 1
-				Outgoing[Identifier] = {}
-			end
-			-- Request to Queue
-			if #net.requests > 0 then
-				inRequestQueue[Identifier] = net.requests
-				inRequestIndex += 1
-				net.requests = {}
-			end
-			-- Return Requests
-			if #net.returnRequest > 0 then
-				throwRequest[Identifier] = net.returnRequest
-				throwIndex += 1
-				net.returnRequest = {}
-			end
-			-- Ping :Wait()
-			if net._ping then
-				FastSpawn(net._ping, os.clock())
-			end
-		end
-		-- Sent queues to server
-		if outIndex > 0 then
-			Event:FireServer(outQueue)
-			outIndex = 0
-			table.clear(outQueue)
-		end
-		if inRequestIndex > 0 then
-			Event:FireServer("0", inRequestQueue)
-			inRequestIndex = 0
-			table.clear(inRequestQueue)
-		end
-		if throwIndex > 0 then
-			Event:FireServer("1", throwRequest)
-			throwIndex = 0
-			table.clear(throwRequest)
-		end
-		debug.profileend()
-	end
-end)
+Process.__start()
 
 return table.freeze(Client)
