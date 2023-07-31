@@ -17,8 +17,8 @@ local function runner(thread): never
 	end
 end
 
--- Multi-Thread (create 100 threads for multi-threading ready)
-for i=1, 100 do
+-- Multi-Thread (create 250 threads for multi-threading ready)
+for i=1,250 do
 	Threads[i] = coroutine.create(runner)
 	coroutine.resume(Threads[i], Threads[i])
 end

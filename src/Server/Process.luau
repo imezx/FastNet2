@@ -17,6 +17,9 @@ function ServerProcess.reg(Identifier)
 			requests = {},
 			packets = {},
 			single = {},
+			_pre = {},
+			_pre_p = {},
+			_pre_f = nil,
 		}
 	end
 end
@@ -54,7 +57,6 @@ function ServerProcess.pushback(Identifier, player, id, obj)
 		Collections[Identifier].returnRequest[player] = {}
 	end
 	Collections[Identifier].returnRequest[player][id] = obj
-	print(Collections[Identifier].returnRequest[player][id], id)
 end
 
 function ServerProcess._ping(Identifier)
@@ -67,12 +69,62 @@ function ServerProcess._ping(Identifier)
 	return coroutine.yield()
 end
 
+function ServerProcess._pre(Identifier, player, pre)
+	if not Collections[Identifier]._pre[player] then
+		Collections[Identifier]._pre[player] = {}
+	end
+	table.insert(Collections[Identifier]._pre[player], pre)
+end
+
+function ServerProcess._pre_p(Identifier, player, pre)
+	if not Collections[Identifier]._pre_p[player] then
+		Collections[Identifier]._pre_p[player] = {}
+	end
+	table.insert(Collections[Identifier]._pre_p[player], pre)
+end
+
+function ServerProcess.reg_pre_f(Identifier, f)
+	Collections[Identifier]._pre_f = f
+end
+
+function ServerProcess.unreg_pre_f(Identifier)
+	Collections[Identifier]._pre_f = nil
+end
+
 function ServerProcess.__start()
 	local _outQueue, outIndex = {}, 0
 	RunService.PostSimulation:Connect(function()
 		debug.profilebegin("FastNet2.process")
 		-- Connections Dataset from Collections
 		for Identifier, net in Collections do
+			if net._pre_f then
+				for player, packet in net._pre do
+					if player and Players:FindFirstChild(player.Name) then
+						if #packet > 0 then
+							for _, data in packet do
+								FastSpawn(net._pre_f, table.unpack(data))
+							end
+							table.clear(packet)
+						end
+					elseif player and not Players:FindFirstChild(player.Name) then
+						-- remove player from pre (player is left)
+						net._pre[player] = nil
+					end
+				end
+				for player, packet in net._pre_p do
+					if player and Players:FindFirstChild(player.Name) then
+						if #packet > 0 then
+							for i, data in packet do
+								ServerProcess.pushback(Identifier, player.Name, i, net._pre_f(player, table.unpack(data)))
+							end
+							table.clear(packet)
+						end
+					elseif player and not Players:FindFirstChild(player.Name) then
+						-- remove player from pre (player is left)
+						net._pre_p[player] = nil
+					end
+				end
+			end
 			-- Multiple Players to Queue
 			if #net.packets > 0 then
 				_outQueue[Identifier] = net.packets
@@ -105,7 +157,6 @@ function ServerProcess.__start()
 				FastSpawn(net._ping, os.clock())
 			end
 		end
-		-- Sent all data to client (Multiple Players)
 		if outIndex > 0 then
 			Event:FireAllClients(_outQueue)
 			outIndex = 0

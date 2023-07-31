@@ -27,6 +27,7 @@ function Server:Connect(callback: Types.callback)
 	if self then
 		assert(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
 		self.func = callback
+		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
 	end
 end
@@ -57,6 +58,7 @@ function Server:Disconnect()
 	if self and self.Connected then
 		self.Connected = false
 		self.func = nil
+		Process.unreg_pre_f(self.Identifier)
 	end
 end
 
@@ -111,6 +113,9 @@ Event.OnServerEvent:Connect(function(player, packets, secondPackets)
 					for _, data in packet do
 						FastSpawn(Collections[Identifier].func, player, table.unpack(data))
 					end
+				else
+					-- throw to Process as pre-process
+					Process._pre(Identifier, player, packet)
 				end
 			end
 			table.clear(packets)
@@ -121,6 +126,9 @@ Event.OnServerEvent:Connect(function(player, packets, secondPackets)
 						for i, data in packet do
 							Process.pushback(Identifier, player.Name, i, Collections[Identifier].func(player, table.unpack(data)))
 						end
+					else
+						-- throw to Process as pre-process
+						Process._pre_p(Identifier, player, packet)
 					end
 				end
 			elseif packets == "1" then
