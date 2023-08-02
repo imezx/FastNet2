@@ -1,4 +1,5 @@
 --FastNet2 (Client)
+--!strict
 local Client = {}
 Client.__index = Client
 
@@ -7,7 +8,6 @@ local RunService = game:GetService("RunService")
 local Process = require(script.Process)
 local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
-local Types = require(script.Parent.Types)
 local Event = script.Parent.Event
 
 local Collections = {}
@@ -18,23 +18,22 @@ function Client.new(Identifier: string)
 	Process.reg(Identifier)
 	Collections[Identifier] = setmetatable({
 		Identifier = Identifier,
-		func = nil,
+		func = function(...: any): (...any) end,
 		Connected = false,
 		flag = {},
 	}, Client)
 	return Collections[Identifier]
 end
 
-function Client:Connect(callback: Types.callback)
+function Client:Connect(callback: (...any) -> ())
 	if self then
 		assert(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
 		self.func = callback
-		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
 	end
 end
 
-function Client:ConnectParallel(callback: Types.callback)
+function Client:ConnectParallel(callback:  (...any) -> ())
 	if self then
 		task.desynchronize()
 		self:Connect(callback)
@@ -42,7 +41,7 @@ function Client:ConnectParallel(callback: Types.callback)
 	end
 end
 
-function Client:Listen(callback: Types.callback)
+function Client:Listen(callback:  (...any) -> ())
 	if self then
 		self:Connect(callback)
 	end
@@ -52,9 +51,10 @@ function Client:Wait(): number
 	if self then
 		return Process._ping(self.Identifier)
 	end
+	return 0
 end
 
-function Client:Once(callback: Types.callback)
+function Client:Once(callback:  (...any) -> ())
 	if self and not self.Connected then
 		self.func = function(...)
 			self:Disconnect()
@@ -68,7 +68,6 @@ function Client:Disconnect()
 	if self and self.Connected then
 		self.Connected = false
 		self.func = nil
-		Process.unreg_pre_f(self.Identifier)
 	end
 end
 
@@ -76,7 +75,7 @@ function Client:Destroy()
 	self:Disconnect()
 	if self then
 		Process.unreg(self.Identifier)
-		self = nil
+		self = setmetatable(self, nil)
 	end
 end
 
@@ -113,18 +112,15 @@ function Client:Pull(expire: number, ...: any)
 	return coroutine.yield() -- wait for return (yield)
 end
 
-Event.OnClientEvent:Connect(function(packets, secondPackets)
+Event.OnClientEvent:Connect(function(packets: any, secondPackets: any)
 	if packets or secondPackets then
 		debug.profilebegin("FastNet2.receive")
 		if typeof(packets) == "table" then
 			for Identifier, packet in packets do
 				if Collections[Identifier] and Collections[Identifier].Connected then
 					for _, data in packet do
-						FastSpawn(Collections[Identifier].func, table.unpack(data))
+						FastSpawn(Collections[Identifier].func :: any, table.unpack(data))
 					end
-				else
-					-- throw to Process as pre-process
-					Process._pre(Identifier, packet)
 				end
 			end
 			table.clear(packets)
@@ -135,9 +131,6 @@ Event.OnClientEvent:Connect(function(packets, secondPackets)
 						for i, data in packet do
 							Process.pushback(Identifier, i, Collections[Identifier].func(data))
 						end
-					else
-						-- throw to Process as pre-process
-						Process._pre_p(Identifier, packet)
 					end
 				end
 			elseif packets == "1" then

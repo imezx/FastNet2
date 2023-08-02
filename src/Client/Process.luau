@@ -1,3 +1,4 @@
+--!strict
 local ClientProcess = {}
 ClientProcess.rateLimit = 250 -- max rate limit (default: 250)
 ClientProcess.maxFreeze = 1 -- max duration freezing reaching rate limit (default: 1)
@@ -10,7 +11,7 @@ local Event = script.Parent.Parent.Event
 local Collections = {}
 local Outgoing = {}
 
-function ClientProcess.reg(Identifier)
+function ClientProcess.reg(Identifier: string)
 	if Identifiers.reg(Identifier) then
 		Collections[Identifier] = {
 			OutgoingOrder = 0,
@@ -18,62 +19,42 @@ function ClientProcess.reg(Identifier)
 			returnRequest = {},
 			requests = {},
 			_rate = os.clock(),
-			_pre = {},
-			_pre_p = {},
-			_pre_f = nil,
-		}
+		} :: any
 		Outgoing[Identifier] = {}
 	end
 end
 
-function ClientProcess.unreg(Identifier)
+function ClientProcess.unreg(Identifier: string)
 	if Identifiers.unreg(Identifier) then
-		Collections[Identifier] = nil
-		Outgoing[Identifier] = nil
+		table.clear(Outgoing[Identifier])
 	end
 end
 
-function ClientProcess.insert(Identifier, obj)
+function ClientProcess.insert(Identifier: string, obj)
 	Collections[Identifier].OutgoingOrder += 1
 	Outgoing[Identifier][Collections[Identifier].OutgoingOrder] = obj
 end
 
-function ClientProcess.verify(Identifier, reqId)
+function ClientProcess.verify(Identifier: string, reqId: number): boolean
 	return Collections[Identifier].requests[reqId] ~= nil and true or false
 end
 
-function ClientProcess.newReq(Identifier, reqId, obj)
+function ClientProcess.newReq(Identifier: string, reqId: number, obj)
 	Collections[Identifier].requests[reqId] = obj
 end
 
-function ClientProcess.pushback(Identifier, id, obj)
+function ClientProcess.pushback(Identifier: string, id: number, obj)
 	Collections[Identifier].returnRequest[id] = obj
 end
 
-function ClientProcess._ping(Identifier)
+function ClientProcess._ping(Identifier: string): number
 	local thread = coroutine.running()
 	local clock = os.clock()
-	Collections[Identifier]._ping = function(x)
+	Collections[Identifier]._ping = function(x: number)
 		Collections[Identifier]._ping = nil
 		task.spawn(thread, x - clock)
 	end
 	return coroutine.yield()
-end
-
-function ClientProcess._pre(Identifier, pre)
-	Collections[Identifier]._pre[#Collections[Identifier]._pre + 1] = pre
-end
-
-function ClientProcess._pre_p(Identifier, pre)
-	Collections[Identifier]._pre_p[#Collections[Identifier]._pre_p + 1] = pre
-end
-
-function ClientProcess.reg_pre_f(Identifier, f)
-	Collections[Identifier]._pre_f = f
-end
-
-function ClientProcess.unreg_pre_f(Identifier)
-	Collections[Identifier]._pre_f = nil
 end
 
 function ClientProcess.__start()
@@ -82,42 +63,8 @@ function ClientProcess.__start()
 	local throwRequest, throwIndex = {}, 0
 	
 	RunService.PostSimulation:Connect(function()
-		debug.profilebegin("FastNet2.sent")
-		-- Sent queues to server
-		if outIndex > 0 then
-			Event:FireServer(outQueue)
-			outIndex = 0
-			table.clear(outQueue)
-		end
-		if inRequestIndex > 0 then
-			Event:FireServer("0", inRequestQueue)
-			inRequestIndex = 0
-			table.clear(inRequestQueue)
-		end
-		if throwIndex > 0 then
-			Event:FireServer("1", throwRequest)
-			throwIndex = 0
-			table.clear(throwRequest)
-		end
-		debug.profileend()
-		
 		debug.profilebegin("FastNet2.process")
-		-- Process
-		for Identifier, net in Collections do
-			if #net._pre > 0 and net._pre_f then
-				for _, data in net._pre do
-					for _, x in data do
-						FastSpawn(net._pre_f, table.unpack(x))
-					end
-				end
-				table.clear(net._pre)
-				for _, data in net._pre_p do
-					for i, x in data do
-						ClientProcess.pushback(Identifier, i, net._pre_f(x))
-					end
-				end
-				table.clear(net._pre_p)
-			end
+		for Identifier: string, net in Collections do
 			-- Packet to Queue
 			if #Outgoing[Identifier] > 0 then
 				if #Outgoing[Identifier] > ClientProcess.rateLimit then
@@ -157,6 +104,22 @@ function ClientProcess.__start()
 			if net._ping then
 				FastSpawn(net._ping, os.clock())
 			end
+		end
+		-- Sent queues to server
+		if outIndex > 0 then
+			Event:FireServer(outQueue)
+			outIndex = 0
+			table.clear(outQueue)
+		end
+		if inRequestIndex > 0 then
+			Event:FireServer("0", inRequestQueue)
+			inRequestIndex = 0
+			table.clear(inRequestQueue)
+		end
+		if throwIndex > 0 then
+			Event:FireServer("1", throwRequest)
+			throwIndex = 0
+			table.clear(throwRequest)
 		end
 		debug.profileend()
 	end)

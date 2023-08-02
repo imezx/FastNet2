@@ -1,23 +1,25 @@
-local ClientIdentifier = {}
-ClientIdentifier.Identifier = {}
+--!strict
+local ServerIdentifier = {}
 
-function ClientIdentifier.find(Identifier)
-	return ClientIdentifier.Identifier[Identifier] ~= nil and true or false
+local Identifiers: {[string]: boolean} = {}
+
+function ServerIdentifier.find(Identifier: string): boolean
+	return Identifiers[Identifier] == true
 end
 
-function ClientIdentifier.reg(Identifier)
-	if not ClientIdentifier.find(Identifier) then
-		ClientIdentifier.Identifier[Identifier] = true
+function ServerIdentifier.reg(Identifier: string): boolean
+	if not ServerIdentifier.find(Identifier) then
+		Identifiers[Identifier] = true
 	end
-	return ClientIdentifier.Identifier[Identifier]
+	return Identifiers[Identifier]
 end
 
-function ClientIdentifier.unreg(Identifier)
-	if ClientIdentifier.find(Identifier) then
-		ClientIdentifier.Identifier[Identifier] = nil
+function ServerIdentifier.unreg(Identifier: string): boolean
+	if ServerIdentifier.find(Identifier) then
+		Identifiers[Identifier] = false
 		return true
 	end
 	return false
 end
 
-return ClientIdentifier
+return table.freeze(ServerIdentifier)

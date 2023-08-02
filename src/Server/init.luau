@@ -1,11 +1,11 @@
 -- FastNet2 (Server)
+--!strict
 local Server = {}
 Server.__index = Server
 
 local Process = require(script.Process)
 local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
-local Types = require(script.Parent.Types)
 local Event = script.Parent.Event
 
 local Collections = {}
@@ -16,35 +16,35 @@ function Server.new(Identifier: string)
 	Process.reg(Identifier)
 	Collections[Identifier] = setmetatable({
 		Identifier = Identifier,
-		func = nil,
+		func = function(...: any): (...any) end,
 		Connected = false,
 		flag = {},
 	}, Server)
 	return Collections[Identifier]
 end
 
-function Server:Connect(callback: Types.callback)
+function Server:Connect(callback:  (...any) -> ())
 	if self then
 		assert(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
 		self.func = callback
-		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
 	end
 end
 
-function Server:Listen(callback: Types.callback)
+function Server:Listen(callback:  (...any) -> ())
 	if self then
 		self:Connect(callback)
 	end
 end
 
-function Server:Wait()
+function Server:Wait(): number
 	if self then
 		return Process._ping(self.Identifier)
 	end
+	return 0
 end
 
-function Server:Once(callback: Types.callback)
+function Server:Once(callback:  (...any) -> ())
 	if self and not self.Connected then
 		self.func = function(...)
 			self:Disconnect()
@@ -58,7 +58,6 @@ function Server:Disconnect()
 	if self and self.Connected then
 		self.Connected = false
 		self.func = nil
-		Process.unreg_pre_f(self.Identifier)
 	end
 end
 
@@ -66,7 +65,7 @@ function Server:Destroy()
 	self:Disconnect()
 	if self then
 		Process.unreg(self.Identifier)
-		self = nil
+		self = setmetatable(self, nil)
 	end
 end
 
@@ -104,7 +103,7 @@ function Server:Pull(expire: number, player: Player, ...: any)
 	return coroutine.yield() -- wait for return (yield)
 end
 
-Event.OnServerEvent:Connect(function(player, packets, secondPackets)
+Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets: any)
 	if player and (packets or secondPackets) then
 		debug.profilebegin("FastNet2.receive")
 		if typeof(packets) == "table" then
@@ -113,9 +112,6 @@ Event.OnServerEvent:Connect(function(player, packets, secondPackets)
 					for _, data in packet do
 						FastSpawn(Collections[Identifier].func, player, table.unpack(data))
 					end
-				else
-					-- throw to Process as pre-process
-					Process._pre(Identifier, player, packet)
 				end
 			end
 			table.clear(packets)
@@ -126,9 +122,6 @@ Event.OnServerEvent:Connect(function(player, packets, secondPackets)
 						for i, data in packet do
 							Process.pushback(Identifier, player.Name, i, Collections[Identifier].func(player, table.unpack(data)))
 						end
-					else
-						-- throw to Process as pre-process
-						Process._pre_p(Identifier, player, packet)
 					end
 				end
 			elseif packets == "1" then

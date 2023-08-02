@@ -3,6 +3,11 @@
 [Refresh]
 - Reupdate existing version
 
+[RC6 - 0.6.0]
+- Client & Server Identifiers are now cached/stored
+- Minor improvements on types
+- Add .CreateUUID function
+
 [RC5 - 0.5.0]
 - Built-in Pre-process (wait till connection target-point being connected)
 

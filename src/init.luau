@@ -1,11 +1,11 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc5 (0.5)
+-- version rc6 (0.6)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = 0.5
+FastNet2.version = 0.6
 
 local IsServer = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
@@ -43,6 +43,10 @@ function FastNet2.CheckUpdate()
 		return
 	end
 	warn("[FastNet2]: Module is up-to-date.")
+end
+
+function FastNet2.CreateUUID(): string
+	return string.gsub(HttpService:GenerateGUID(false), "-", "") :: string
 end
 
 if IsServer then
