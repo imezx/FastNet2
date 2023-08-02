@@ -127,7 +127,7 @@ Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets
 						end
 					else
 						-- throw to Process as pre-process
-						Process._pre(Identifier, player, packet)
+						Process._pre_p(Identifier, player, packet)
 					end
 				end
 			elseif packets == "1" then
