@@ -123,7 +123,7 @@ Event.OnClientEvent:Connect(function(packets: any, secondPackets: any)
 					end
 				else
 					-- throw to Process as pre-process
-					Process._pre_p(Identifier, packet)
+					Process._pre(Identifier, packet)
 				end
 			end
 			table.clear(packets)
