@@ -27,6 +27,7 @@ function Server:Connect(callback:  (...any) -> ())
 	if self then
 		assert(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
 		self.func = callback
+		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
 	end
 end
@@ -57,6 +58,7 @@ end
 function Server:Disconnect()
 	if self and self.Connected then
 		self.Connected = false
+		Process.unreg_pre_f(self.Identifier)
 		self.func = nil
 	end
 end
