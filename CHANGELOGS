@@ -3,6 +3,9 @@
 [Refresh]
 - Reupdate existing version
 
+[PATCH - 0.6.1]
+- Patch 0.6.0 doesnt have rc5 updates
+
 [RC6 - 0.6.0]
 - Client & Server Identifiers are now cached/stored
 - Minor improvements on types
