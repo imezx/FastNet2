@@ -1,11 +1,11 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc6 (0.6)
+-- version rc6 (0.6.1)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = 0.6
+FastNet2.version = 0.61
 
 local IsServer = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
