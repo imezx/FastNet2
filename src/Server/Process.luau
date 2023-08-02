@@ -1,3 +1,4 @@
+--!strict
 local ServerProcess = {}
 
 local Players = game:GetService("Players")
@@ -8,7 +9,7 @@ local Event = script.Parent.Parent.Event
 
 local Collections = {}
 
-function ServerProcess.reg(Identifier)
+function ServerProcess.reg(Identifier: string)
 	if Identifiers.reg(Identifier) then
 		Collections[Identifier] = {
 			Identifier = Identifier,
@@ -17,78 +18,51 @@ function ServerProcess.reg(Identifier)
 			requests = {},
 			packets = {},
 			single = {},
-			_pre = {},
-			_pre_p = {},
-			_pre_f = nil,
-		}
+		} :: any
 	end
 end
 
-function ServerProcess.unreg(Identifier)
-	if Identifiers.unreg(Identifier) then
-		Collections[Identifier] = nil
-	end
+function ServerProcess.unreg(Identifier: string): boolean
+	return Identifiers.unreg(Identifier) :: boolean
 end
 
-function ServerProcess.s_insert(Identifier, player, obj)
+function ServerProcess.s_insert(Identifier: string, player: Player, obj)
 	if not Collections[Identifier].single[player.Name] then
 		Collections[Identifier].single[player.Name] = {}
 	end
 	table.insert(Collections[Identifier].single[player.Name], obj)
 end
 
-function ServerProcess.insert(Identifier, obj)
+function ServerProcess.insert(Identifier: string, obj)
 	table.insert(Collections[Identifier].packets, obj)
 end
 
-function ServerProcess.verify(Identifier, player, reqId)
+function ServerProcess.verify(Identifier: string, player: Player, reqId: number): boolean
 	return Collections[Identifier].requests[player][reqId] ~= nil and true or false
 end
 
-function ServerProcess.newReq(Identifier, reqId, player, obj)
+function ServerProcess.newReq(Identifier: string, reqId: number, player: Player, obj)
 	if not Collections[Identifier].requests[player] then
 		Collections[Identifier].requests[player] = {}
 	end
 	Collections[Identifier].requests[player][reqId] = obj
 end
 
-function ServerProcess.pushback(Identifier, player, id, obj)
+function ServerProcess.pushback(Identifier: string, player: string, id: number, obj)
 	if not Collections[Identifier].returnRequest[player] then
 		Collections[Identifier].returnRequest[player] = {}
 	end
 	Collections[Identifier].returnRequest[player][id] = obj
 end
 
-function ServerProcess._ping(Identifier)
+function ServerProcess._ping(Identifier): number
 	local thread = coroutine.running()
 	local clock = os.clock()
-	Collections[Identifier]._ping = function(x)
+	Collections[Identifier]._ping = function(x: number)
 		Collections[Identifier]._ping = nil
 		task.spawn(thread, x - clock)
 	end
 	return coroutine.yield()
-end
-
-function ServerProcess._pre(Identifier, player, pre)
-	if not Collections[Identifier]._pre[player] then
-		Collections[Identifier]._pre[player] = {}
-	end
-	table.insert(Collections[Identifier]._pre[player], pre)
-end
-
-function ServerProcess._pre_p(Identifier, player, pre)
-	if not Collections[Identifier]._pre_p[player] then
-		Collections[Identifier]._pre_p[player] = {}
-	end
-	table.insert(Collections[Identifier]._pre_p[player], pre)
-end
-
-function ServerProcess.reg_pre_f(Identifier, f)
-	Collections[Identifier]._pre_f = f
-end
-
-function ServerProcess.unreg_pre_f(Identifier)
-	Collections[Identifier]._pre_f = nil
 end
 
 function ServerProcess.__start()
@@ -96,35 +70,7 @@ function ServerProcess.__start()
 	RunService.PostSimulation:Connect(function()
 		debug.profilebegin("FastNet2.process")
 		-- Connections Dataset from Collections
-		for Identifier, net in Collections do
-			if net._pre_f then
-				for player, packet in net._pre do
-					if player and Players:FindFirstChild(player.Name) then
-						if #packet > 0 then
-							for _, data in packet do
-								FastSpawn(net._pre_f, table.unpack(data))
-							end
-							table.clear(packet)
-						end
-					elseif player and not Players:FindFirstChild(player.Name) then
-						-- remove player from pre (player is left)
-						net._pre[player] = nil
-					end
-				end
-				for player, packet in net._pre_p do
-					if player and Players:FindFirstChild(player.Name) then
-						if #packet > 0 then
-							for i, data in packet do
-								ServerProcess.pushback(Identifier, player.Name, i, net._pre_f(player, table.unpack(data)))
-							end
-							table.clear(packet)
-						end
-					elseif player and not Players:FindFirstChild(player.Name) then
-						-- remove player from pre (player is left)
-						net._pre_p[player] = nil
-					end
-				end
-			end
+		for Identifier: string, net in Collections do
 			-- Multiple Players to Queue
 			if #net.packets > 0 then
 				_outQueue[Identifier] = net.packets
@@ -157,6 +103,7 @@ function ServerProcess.__start()
 				FastSpawn(net._ping, os.clock())
 			end
 		end
+		-- Sent all data to client (Multiple Players)
 		if outIndex > 0 then
 			Event:FireAllClients(_outQueue)
 			outIndex = 0
