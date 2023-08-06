@@ -17,7 +17,9 @@ function ClientProcess.reg(Identifier: string)
 			OutgoingOrder = 0,
 			_ping = nil,
 			returnRequest = {},
+			re_req_i = 0,
 			requests = {},
+			req_i = 0,
 			_rate = os.clock(),
 			_pre = {},
 			_pre_p = {},
@@ -38,16 +40,18 @@ function ClientProcess.insert(Identifier: string, obj)
 	Outgoing[Identifier][Collections[Identifier].OutgoingOrder] = obj
 end
 
-function ClientProcess.verify(Identifier: string, reqId: number): boolean
+function ClientProcess.verify(Identifier: string, reqId: string): boolean
 	return Collections[Identifier].requests[reqId] ~= nil and true or false
 end
 
-function ClientProcess.newReq(Identifier: string, reqId: number, obj)
+function ClientProcess.newReq(Identifier: string, reqId: string, obj)
 	Collections[Identifier].requests[reqId] = obj
+	Collections[Identifier].req_i += 1
 end
 
-function ClientProcess.pushback(Identifier: string, id: number, obj)
+function ClientProcess.pushback(Identifier: string, id: string, obj)
 	Collections[Identifier].returnRequest[id] = obj
+	Collections[Identifier].re_req_i += 1
 end
 
 function ClientProcess._ping(Identifier: string): number
@@ -61,14 +65,17 @@ function ClientProcess._ping(Identifier: string): number
 end
 
 function ClientProcess._pre(Identifier: string, pre)
+	ClientProcess.reg(Identifier)
 	Collections[Identifier]._pre[#Collections[Identifier]._pre + 1] = pre
 end
 
 function ClientProcess._pre_p(Identifier: string, pre)
+	ClientProcess.reg(Identifier)
 	Collections[Identifier]._pre_p[#Collections[Identifier]._pre_p + 1] = pre
 end
 
 function ClientProcess.reg_pre_f(Identifier: string, f)
+	ClientProcess.reg(Identifier)
 	Collections[Identifier]._pre_f = f
 end
 
@@ -78,41 +85,45 @@ end
 
 function ClientProcess.__start()
 	local outQueue, outIndex = {}, 0
-	local inRequestQueue, inRequestIndex = {}, 0
+	local outRequestQueue, outRequestIndex = {}, 0
 	local throwRequest, throwIndex = {}, 0
-	
+
 	RunService.PostSimulation:Connect(function()
 		-- Sent queues to server
 		if outIndex > 0 then
-			Event:FireServer(outQueue)
 			outIndex = 0
+			Event:FireServer(outQueue)
 			table.clear(outQueue)
 		end
-		if inRequestIndex > 0 then
-			Event:FireServer("0", inRequestQueue)
-			inRequestIndex = 0
-			table.clear(inRequestQueue)
+		if outRequestIndex > 0 then
+			outRequestIndex = 0
+			Event:FireServer("0", outRequestQueue)
+			table.clear(outRequestQueue)
 		end
 		if throwIndex > 0 then
-			Event:FireServer("1", throwRequest)
 			throwIndex = 0
+			Event:FireServer("1", throwRequest)
 			table.clear(throwRequest)
 		end
 		debug.profilebegin("FastNet2.process")
 		for Identifier: string, net in Collections do
-			if #net._pre > 0 and net._pre_f then
-				for _, data in net._pre do
-					for _, x in data do
-						FastSpawn(net._pre_f, table.unpack(x))
+			if net._pre_f then
+				if #net._pre > 0 then
+					for _, data in net._pre do
+						for _, x in data do
+							FastSpawn(net._pre_f, table.unpack(x))
+						end
+					end
+					table.clear(net._pre)
+				end
+				if #net._pre_p > 0 then
+					for _, data in net._pre_p do
+						for i, x in data do
+							ClientProcess.pushback(Identifier, i, net._pre_f(table.unpack(x)))
+						end
+						table.clear(data)
 					end
 				end
-				table.clear(net._pre)
-				for _, data in net._pre_p do
-					for i, x in data do
-						ClientProcess.pushback(Identifier, i, net._pre_f(x))
-					end
-				end
-				table.clear(net._pre_p)
 			end
 			-- Packet to Queue
 			if #Outgoing[Identifier] > 0 then
@@ -138,16 +149,18 @@ function ClientProcess.__start()
 				end
 			end
 			-- Request to Queue
-			if #net.requests > 0 then
-				inRequestQueue[Identifier] = net.requests
-				inRequestIndex += 1
+			if net.req_i > 0 then
+				outRequestQueue[Identifier] = net.requests
+				net.req_i = 0
 				net.requests = {}
+				outRequestIndex += 1
 			end
 			-- Return Requests
-			if #net.returnRequest > 0 then
+			if net.re_req_i > 0 then
 				throwRequest[Identifier] = net.returnRequest
-				throwIndex += 1
+				net.re_req_i = 0
 				net.returnRequest = {}
+				throwIndex += 1
 			end
 			-- Ping :Wait()
 			if net._ping then
@@ -156,6 +169,9 @@ function ClientProcess.__start()
 		end
 		debug.profileend()
 	end)
+	if not script.Parent.Parent:WaitForChild("Event"):GetAttribute(game:GetService("Players").LocalPlayer.Name) then
+		Event:FireServer("2", game:GetService("Players").LocalPlayer)
+	end
 end
 
-return table.freeze(ClientProcess)
+return table.freeze(ClientProcess) :: typeof(ClientProcess)
