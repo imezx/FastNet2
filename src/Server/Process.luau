@@ -5,7 +5,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Identifiers = require(script.Parent.Identifier)
 local FastSpawn = require(script.Parent.Parent.FastSpawn)
-local Event = script.Parent.Parent.Event
+local Event = script.Parent.Parent:WaitForChild("Event")
 
 local Collections = {}
 
@@ -15,7 +15,9 @@ function ServerProcess.reg(Identifier: string)
 			Identifier = Identifier,
 			_ping = nil,
 			returnRequest = {},
+			re_req_i = 0,
 			requests = {},
+			req_i = 0,
 			packets = {},
 			single = {},
 			_pre = {},
@@ -49,6 +51,7 @@ function ServerProcess.newReq(Identifier: string, reqId: number, player: Player,
 		Collections[Identifier].requests[player] = {}
 	end
 	Collections[Identifier].requests[player][reqId] = obj
+	Collections[Identifier].req_i += 1
 end
 
 function ServerProcess.pushback(Identifier: string, player: string, id: number, obj)
@@ -56,6 +59,7 @@ function ServerProcess.pushback(Identifier: string, player: string, id: number, 
 		Collections[Identifier].returnRequest[player] = {}
 	end
 	Collections[Identifier].returnRequest[player][id] = obj
+	Collections[Identifier].re_req_i += 1
 end
 
 function ServerProcess._ping(Identifier: string): number
@@ -69,6 +73,7 @@ function ServerProcess._ping(Identifier: string): number
 end
 
 function ServerProcess._pre(Identifier: string, player: Player, pre)
+	ServerProcess.reg(Identifier)
 	if not Collections[Identifier]._pre[player] then
 		Collections[Identifier]._pre[player] = {}
 	end
@@ -76,6 +81,7 @@ function ServerProcess._pre(Identifier: string, player: Player, pre)
 end
 
 function ServerProcess._pre_p(Identifier: string, player: Player, pre)
+	ServerProcess.reg(Identifier)
 	if not Collections[Identifier]._pre_p[player] then
 		Collections[Identifier]._pre_p[player] = {}
 	end
@@ -83,6 +89,7 @@ function ServerProcess._pre_p(Identifier: string, player: Player, pre)
 end
 
 function ServerProcess.reg_pre_f(Identifier: string, f)
+	ServerProcess.reg(Identifier)
 	Collections[Identifier]._pre_f = f
 end
 
@@ -91,8 +98,24 @@ function ServerProcess.unreg_pre_f(Identifier: string)
 end
 
 function ServerProcess.__start()
-	local _outQueue, outIndex = {}, 0
+	local outQueue, outIndex = {}, 0
+	local outSQueue, outSIndex = {}, 0
 	RunService.PostSimulation:Connect(function()
+		-- Sent all data to client (Multiple Players)
+		if outIndex > 0 then
+			outIndex = 0
+			Event:FireAllClients(outQueue)
+			table.clear(outQueue)
+		end
+		if outSIndex > 0 then
+			for player, packet in pairs(outSQueue) do
+				if player and Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
+					Event:FireClient(Players[player], packet)
+					outSIndex -= 1
+					table.clear(packet)
+				end
+			end
+		end
 		debug.profilebegin("FastNet2.process")
 		-- Connections Dataset from Collections
 		for Identifier: string, net in Collections do
@@ -126,29 +149,36 @@ function ServerProcess.__start()
 			end
 			-- Multiple Players to Queue
 			if #net.packets > 0 then
-				_outQueue[Identifier] = net.packets
+				outQueue[Identifier] = net.packets
 				outIndex += 1
 				net.packets = {}
 			end
 			-- Requests to Queue
 			for player, requests in net.requests do
-				if #requests > 0 then
-					Event:FireClient(player, "0", {[net.Identifier] = table.unpack(requests)})
+				if net.req_i > 0 and player and Players:FindFirstChild(player.Name) and Event:GetAttribute(player.Name) == true then
+					Event:FireClient(player, "0", {[net.Identifier] = requests})
 					table.clear(requests)
+				end
+			end
+			-- Return Requests
+			for player, data in net.returnRequest do
+				if net.re_req_i > 0 and Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
+					Event:FireClient(Players[player], "1", {[net.Identifier] = data})
+					table.clear(data)
 				end
 			end
 			-- Single Players to Queue
 			for player, packets in net.single do
 				if #packets > 0 and Players:FindFirstChild(player) then
-					Event:FireClient(Players[player], {[net.Identifier] = packets})
+					if not outSQueue[player] then
+						outSQueue[player] = {}
+					end
+					if not outSQueue[player][net.Identifier] then
+						outSQueue[player][net.Identifier] = {}
+					end
+					outSQueue[player][net.Identifier] = table.clone(packets)
 					table.clear(packets)
-				end
-			end
-			-- Return Requests
-			for player, data in net.returnRequest do
-				if #data > 0 and Players:FindFirstChild(player) then
-					Event:FireClient(Players[player], "1", {[net.Identifier] = data})
-					table.clear(data)
+					outSIndex += 1
 				end
 			end
 			-- Ping :Wait()
@@ -156,14 +186,8 @@ function ServerProcess.__start()
 				FastSpawn(net._ping, os.clock())
 			end
 		end
-		-- Sent all data to client (Multiple Players)
-		if outIndex > 0 then
-			Event:FireAllClients(_outQueue)
-			outIndex = 0
-			table.clear(_outQueue)
-		end
 		debug.profileend()
 	end)
 end
 
-return table.freeze(ServerProcess)
+return table.freeze(ServerProcess) :: typeof(ServerProcess)
