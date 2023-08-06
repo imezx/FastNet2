@@ -22,4 +22,4 @@ function ServerIdentifier.unreg(Identifier: string): boolean
 	return false
 end
 
-return table.freeze(ServerIdentifier)
+return table.freeze(ServerIdentifier) :: typeof(ServerIdentifier)
