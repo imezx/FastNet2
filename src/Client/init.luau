@@ -1,5 +1,4 @@
 --FastNet2 (Client)
---!strict
 local Client = {}
 Client.__index = Client
 
@@ -8,7 +7,7 @@ local RunService = game:GetService("RunService")
 local Process = require(script.Process)
 local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
-local Event = script.Parent.Event
+local Event = script.Parent:WaitForChild("Event")
 
 local Collections = {}
 
@@ -81,18 +80,18 @@ function Client:Destroy()
 	end
 end
 
-function Client:Fires()
-	warn("[FastNet2]: 'Fires' only can be used on server.")
-end
-
 function Client:Fire(...: any)
 	Process.insert(self.Identifier, { ... })
+end
+
+function Client:Fires(...: any)
+	warn("[FastNet2]: 'Fires' only can be used on server.")
 end
 
 function Client:Pull(expire: number, ...: any)
 	assert(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
 	assert(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
-	local thread, requestId = coroutine.running(), (#self.flag + 1)
+	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
 	local session = task.delay(expire, function()
 		-- session expire
 		-- removing and clear entire requests point
@@ -116,7 +115,6 @@ end
 
 Event.OnClientEvent:Connect(function(packets: any, secondPackets: any)
 	if packets or secondPackets then
-		debug.profilebegin("FastNet2.receive")
 		if typeof(packets) == "table" then
 			for Identifier, packet in packets do
 				if Collections[Identifier] and Collections[Identifier].Connected then
@@ -154,10 +152,9 @@ Event.OnClientEvent:Connect(function(packets: any, secondPackets: any)
 			end
 			table.clear(secondPackets)
 		end
-		debug.profileend()
 	end
 end)
 
 Process.__start()
 
-return table.freeze(Client)
+return table.freeze(Client) :: typeof(Client)
