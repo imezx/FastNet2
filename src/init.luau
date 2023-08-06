@@ -1,11 +1,11 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc6 (0.6.1)
+-- version rc7 (0.7)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = 0.61
+FastNet2.version = 0.7
 
 local IsServer = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
@@ -16,7 +16,7 @@ end
 
 local Signal = require(script.oneSignal)
 
--- Signal (oneSignal, oneSignal.luau)
+-- Custom Signal a alternative of BindableEvent (oneSignal, oneSignal.luau)
 function FastNet2.Signal(Identifier: string)
 	local Is, signal = pcall(function()
 		return Signal.new(Identifier)
@@ -27,6 +27,7 @@ function FastNet2.Signal(Identifier: string)
 	return signal
 end
 
+-- Check Update (version build) available
 function FastNet2.CheckUpdate()
 	assert(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.")
 	local success: boolean, receive: number = pcall(function()
@@ -35,16 +36,15 @@ function FastNet2.CheckUpdate()
 		) :: number
 	end)
 	if not success then
-		warn("[FastNet2]: Failed to check update.")
-		return
+		return warn("[FastNet2]: Failed to check update.")
 	end
 	if receive > FastNet2.version then
-		warn(string.format("[FastNet2]: new update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
-		return
+		return warn(string.format("[FastNet2]: new update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
 	end
-	warn("[FastNet2]: Module is up-to-date.")
+	return warn("[FastNet2]: Module is up-to-date.")
 end
 
+-- Create new UUID (Universally Unique Identifier)
 function FastNet2.CreateUUID(): string
 	return string.gsub(HttpService:GenerateGUID(false), "-", "") :: string
 end
