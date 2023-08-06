@@ -1,5 +1,4 @@
 -- FastNet2 (Server)
---!strict
 local Server = {}
 Server.__index = Server
 
@@ -29,6 +28,14 @@ function Server:Connect(callback:  (...any) -> ())
 		self.func = callback
 		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
+	end
+end
+
+function Server:ConnectParallel(callback:  (...any) -> ())
+	if self then
+		task.desynchronize()
+		self:Connect(callback)
+		task.synchronize()
 	end
 end
 
@@ -83,7 +90,7 @@ function Server:Pull(expire: number, player: Player, ...: any)
 	assert(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
 	assert(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
 	assert(player:IsA("Player"), "[FastNet2]: player argument must be a Player.")
-	local thread, requestId = coroutine.running(), (#self.flag + 1)
+	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
 	local session = task.delay(expire, function()
 		-- session expire
 		-- removing and clear entire requests point
@@ -107,7 +114,6 @@ end
 
 Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets: any)
 	if player and (packets or secondPackets) then
-		debug.profilebegin("FastNet2.receive")
 		if typeof(packets) == "table" then
 			for Identifier, packet in packets do
 				if Collections[Identifier] and Collections[Identifier].Connected then
@@ -132,6 +138,7 @@ Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets
 						Process._pre_p(Identifier, player, packet)
 					end
 				end
+				table.clear(secondPackets)
 			elseif packets == "1" then
 				for Identifier, packet in secondPackets do
 					if Collections[Identifier] then
@@ -142,13 +149,16 @@ Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets
 						end
 					end
 				end
+				table.clear(secondPackets)
+			elseif packets == "2" then
+				if not script.Parent:WaitForChild("_Players"):GetAttribute(tostring(secondPackets)) then
+					script.Parent:WaitForChild("_Players"):SetAttribute(tostring(secondPackets), true)
+				end
 			end
-			table.clear(secondPackets)
 		end
-		debug.profileend()
 	end
 end)
 
 Process.__start()
 
-return table.freeze(Server)
+return table.freeze(Server) :: typeof(Server)
