@@ -3,6 +3,14 @@
 [Refresh]
 - Reupdate existing version
 
+[RC7 - 0.7.0]
+- Fixed & Improved Built-in player connections pre-process wait issue from rc5 0.5.0
+- Fixed Server & Client MULTIPLE Pull/Invoke
+- Fixed Server & Client Identifier Registration
+- Fixed Server & Client returning Multiple Requests (Invoke/Pull)
+- Fully fixed 0.6.1 doesnt have full rc5
+- Changed Pull/Invoke requestId to string from number
+
 [PATCH - 0.6.1]
 - Patch 0.6.0 doesnt have rc5 updates
 
