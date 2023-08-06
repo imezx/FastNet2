@@ -10,8 +10,9 @@ end
 function ClientIdentifier.reg(Identifier: string): boolean
 	if not ClientIdentifier.find(Identifier) then
 		Identifiers[Identifier] = true
+		return true
 	end
-	return Identifiers[Identifier]
+	return false
 end
 
 function ClientIdentifier.unreg(Identifier: string): boolean
@@ -22,4 +23,4 @@ function ClientIdentifier.unreg(Identifier: string): boolean
 	return false
 end
 
-return table.freeze(ClientIdentifier)
+return table.freeze(ClientIdentifier) :: typeof(ClientIdentifier)
