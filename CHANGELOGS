@@ -3,6 +3,11 @@
 [Refresh]
 - Reupdate existing version
 
+[RC8 - 0.8.0]
+- Add Debugging
+- moved assert to Debug
+- Add RateLimit on :Fire (CLIENT)
+
 [RC7 - 0.7.0]
 - Fixed & Improved Built-in player connections pre-process wait issue from rc5 0.5.0
 - Fixed Server & Client MULTIPLE Pull/Invoke

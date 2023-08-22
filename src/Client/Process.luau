@@ -1,12 +1,15 @@
 --!strict
 local ClientProcess = {}
-ClientProcess.rateLimit = 250 -- max rate limit (default: 250)
+ClientProcess.processLimit = 250 -- max rate process limit (default: 250)
+ClientProcess.rateLimit = 150 -- max rate limit (default: 150)
 ClientProcess.maxFreeze = 1 -- max duration freezing reaching rate limit (default: 1)
 
 local RunService = game:GetService("RunService")
 local Identifiers = require(script.Parent.Identifier)
 local FastSpawn = require(script.Parent.Parent.FastSpawn)
-local Event = script.Parent.Parent.Event
+local Debug = require(script.Parent.Debug)
+
+local Event = script.Parent.Parent:WaitForChild("Event")
 
 local Collections = {}
 local Outgoing = {}
@@ -36,6 +39,7 @@ function ClientProcess.unreg(Identifier: string)
 end
 
 function ClientProcess.insert(Identifier: string, obj)
+	if not Debug.new(Collections[Identifier].OutgoingOrder < ClientProcess.rateLimit, "[FastNet2]: Unable to call :Fire (rate-limit reached)") then return end
 	Collections[Identifier].OutgoingOrder += 1
 	Outgoing[Identifier][Collections[Identifier].OutgoingOrder] = obj
 end
@@ -127,13 +131,13 @@ function ClientProcess.__start()
 			end
 			-- Packet to Queue
 			if #Outgoing[Identifier] > 0 then
-				if #Outgoing[Identifier] > ClientProcess.rateLimit then
+				if #Outgoing[Identifier] > ClientProcess.processLimit then
 					if not outQueue[Identifier] then
 						outQueue[Identifier] = {}
 					end
 					if (os.clock() - net._rate) >= ClientProcess.maxFreeze then
 						net._rate = os.clock()
-						for i=1,ClientProcess.rateLimit do
+						for i=1,ClientProcess.processLimit do
 							outQueue[Identifier][i] = Outgoing[Identifier][i]
 							net.OutgoingOrder -= 1
 							table.remove(Outgoing[Identifier], i)

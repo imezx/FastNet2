@@ -1,14 +1,15 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc7 (0.7)
+-- version rc8 (0.8)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = 0.7
+FastNet2.version = 0.8
 
 local IsServer = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
+local Debug = require(script.Debug)
 
 if not script:FindFirstChild("Event") then
 	Instance.new("RemoteEvent", script).Name = "Event"
@@ -47,6 +48,14 @@ end
 -- Create new UUID (Universally Unique Identifier)
 function FastNet2.CreateUUID(): string
 	return string.gsub(HttpService:GenerateGUID(false), "-", "") :: string
+end
+
+function FastNet2.Debug(opt: boolean)
+	return Debug._debug(opt)
+end
+
+function FastNet2.debugs()
+	return Debug.receiveAll()
 end
 
 if IsServer then

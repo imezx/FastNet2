@@ -5,13 +5,15 @@ Server.__index = Server
 local Process = require(script.Process)
 local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
-local Event = script.Parent.Event
+local Debug = require(script.Parent.Debug)
+
+local Event = script.Parent:WaitForChild("Event")
 
 local Collections = {}
 
 function Server.new(Identifier: string)
-	assert(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
-	assert(not Identifiers.find(Identifier), string.format("[FastNet2]: %s already exist", Identifier))
+	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
+	Debug.new(not Identifiers.find(Identifier), string.format("[FastNet2]: %s already exist", Identifier))
 	Process.reg(Identifier)
 	Collections[Identifier] = setmetatable({
 		Identifier = Identifier,
@@ -24,7 +26,7 @@ end
 
 function Server:Connect(callback:  (...any) -> ())
 	if self then
-		assert(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
+		Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
 		self.func = callback
 		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
@@ -87,9 +89,9 @@ function Server:Fires(...: any)
 end
 
 function Server:Pull(expire: number, player: Player, ...: any)
-	assert(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
-	assert(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
-	assert(player:IsA("Player"), "[FastNet2]: player argument must be a Player.")
+	Debug.new(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
+	Debug.new(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
+	Debug.new(player:IsA("Player"), "[FastNet2]: player argument must be a Player.")
 	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
 	local session = task.delay(expire, function()
 		-- session expire
