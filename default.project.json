@@ -1,9 +1,6 @@
 {
   "name": "fastnet2",
   "tree": {
-    "$className": "DataModel",
-    "FastNet": {
-      "$path": "src"
-    }
+    "$path": "src"
   }
 }
