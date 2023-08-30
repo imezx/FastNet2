@@ -6,6 +6,7 @@
 [PATCH - 0.8.2]
 - Fixed Request/Pull over-send (SERVER)
 - Fixed Request/Pull return/response data being tabled (SERVER)
+- Fixed Built-In wait player feature
 - Minor Improvement (SERVER & CLIENT)
 
 [RC8 - 0.8.0]
