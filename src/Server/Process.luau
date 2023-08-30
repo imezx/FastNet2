@@ -156,6 +156,7 @@ function ServerProcess.__start()
 			-- Requests to Queue
 			for player, requests in net.requests do
 				if net.req_i > 0 and player and Players:FindFirstChild(player.Name) and Event:GetAttribute(player.Name) == true then
+					net.req_i -= 1
 					Event:FireClient(player, "0", {[net.Identifier] = requests})
 					table.clear(requests)
 				end
@@ -163,6 +164,7 @@ function ServerProcess.__start()
 			-- Return Requests
 			for player, data in net.returnRequest do
 				if net.re_req_i > 0 and Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
+					net.re_req_i -= 1
 					Event:FireClient(Players[player], "1", {[net.Identifier] = data})
 					table.clear(data)
 				end

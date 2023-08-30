@@ -9,7 +9,6 @@ function Debug._debug(opt: boolean)
 end
 
 function Debug.new(condition: any, message: string): boolean
-	print(condition, IsDebugging, message)
 	if IsDebugging and not (condition) then table.insert(Logs, message) warn(message) end
 	return (condition)
 end

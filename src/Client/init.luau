@@ -103,16 +103,16 @@ function Client:Pull(expire: number, ...: any)
 		if Process.verify(self.Identifier, requestId) then
 			table.remove(self.flag, requestId)
 		end
-		coroutine.resume(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
+		task.spawn(thread, nil) -- spawn thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
 	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
 		task.cancel(session)
-		coroutine.resume(thread, ...) -- resume thread to finish and return data as successed
+		task.spawn(thread, ...) -- spawn thread to finish and return data as successed
 	end
 	-- push new request
 	Process.newReq(self.Identifier, requestId, { ... })
-	return coroutine.yield() -- wait for return (yield)
+	return coroutine.yield() -- wait for response (yield)
 end
 
 Event.OnClientEvent:Connect(function(packets: any, secondPackets: any)
@@ -134,7 +134,7 @@ Event.OnClientEvent:Connect(function(packets: any, secondPackets: any)
 				for Identifier, packet in secondPackets do
 					if Collections[Identifier] and Collections[Identifier].Connected then
 						for i, data in packet do
-							Process.pushback(Identifier, i, Collections[Identifier].func(data))
+							Process.pushback(Identifier, i, Collections[Identifier].func(table.unpack(data)))
 						end
 					else
 						-- throw to Process as pre-process

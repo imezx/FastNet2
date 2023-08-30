@@ -102,16 +102,16 @@ function Server:Pull(expire: number, player: Player, ...: any)
 		if Process.verify(self.Identifier, player, requestId) then
 			table.remove(self.flag, requestId)
 		end
-		coroutine.resume(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
+		task.spawn(thread, nil) -- spawn thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
 	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
 		task.cancel(session)
-		coroutine.resume(thread, ...) -- resume thread to finish and return data as successed
+		task.spawn(thread, ...) -- spawn thread to finish and return data as successed
 	end
 	-- push new request
 	Process.newReq(self.Identifier, requestId, player, { ... })
-	return coroutine.yield() -- wait for return (yield)
+	return coroutine.yield() -- wait for response (yield)
 end
 
 Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets: any)
@@ -153,8 +153,8 @@ Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets
 				end
 				table.clear(secondPackets)
 			elseif packets == "2" then
-				if not script.Parent:WaitForChild("_Players"):GetAttribute(tostring(secondPackets)) then
-					script.Parent:WaitForChild("_Players"):SetAttribute(tostring(secondPackets), true)
+				if not Event:GetAttribute(tostring(secondPackets)) then
+					Event:SetAttribute(tostring(secondPackets), true)
 				end
 			end
 		end

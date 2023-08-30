@@ -6,7 +6,7 @@ local function passer(run, ...)
 	run(...)
 end
 
-local function runner(thread): never
+local function runner(thread)
 	while true do
 		passer(coroutine.yield())
 		if #Threads > 0 and not Threads[#Threads] then

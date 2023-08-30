@@ -7,7 +7,7 @@ ClientProcess.maxFreeze = 1 -- max duration freezing reaching rate limit (defaul
 local RunService = game:GetService("RunService")
 local Identifiers = require(script.Parent.Identifier)
 local FastSpawn = require(script.Parent.Parent.FastSpawn)
-local Debug = require(script.Parent.Debug)
+local Debug = require(script.Parent.Parent.Debug)
 
 local Event = script.Parent.Parent:WaitForChild("Event")
 
