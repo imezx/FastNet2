@@ -1,11 +1,11 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc8 (0.8.2)
+-- version rc9 (0.9.0)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
-FastNet2.version = 0.8
+FastNet2.version = 0.9
 
 local IsServer = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
@@ -18,7 +18,7 @@ end
 local Signal = require(script.oneSignal)
 
 -- Custom Signal a alternative of BindableEvent (oneSignal, oneSignal.luau)
-function FastNet2.Signal(Identifier: string)
+function FastNet2.Signal(Identifier: string): typeof(Signal)
 	local Is, signal = pcall(function()
 		return Signal.new(Identifier)
 	end)
@@ -30,7 +30,7 @@ end
 
 -- Check Update (version build) available
 function FastNet2.CheckUpdate()
-	assert(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.")
+	Debug.new(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.")
 	local success: boolean, receive: number = pcall(function()
 		return tonumber(
 			HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)

@@ -137,7 +137,7 @@ function ServerProcess.__start()
 					if player and Players:FindFirstChild(player.Name) then
 						if #packet > 0 then
 							for i, data in packet do
-								ServerProcess.pushback(Identifier, player.Name, i, net._pre_f(player, table.unpack(data)))
+								FastSpawn(ServerProcess.pushback, Identifier, player.Name, i, net._pre_f(player, table.unpack(data)))
 							end
 							table.clear(packet)
 						end

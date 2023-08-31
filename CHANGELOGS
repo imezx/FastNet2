@@ -3,6 +3,13 @@
 [Refresh]
 - Reupdate existing version
 
+[RC9 - 0.9.0]
+- Improved Invoke/Pull System on SERVER & CLIENT (upto 5x faster)
+- Added :Invoke (function) for Signal (oneSignal)
+- Improved FastSpawn type
+- Migrated coroutine.resume to task.spawn on oneSignal
+- Fixed FastNet2Module.Signal (function) type
+
 [PATCH - 0.8.2]
 - Fixed Request/Pull over-send (SERVER)
 - Fixed Request/Pull return/response data being tabled (SERVER)

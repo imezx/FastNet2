@@ -123,7 +123,7 @@ function ClientProcess.__start()
 				if #net._pre_p > 0 then
 					for _, data in net._pre_p do
 						for i, x in data do
-							ClientProcess.pushback(Identifier, i, net._pre_f(table.unpack(x)))
+							FastSpawn(ClientProcess.pushback, Identifier, i, net._pre_f(table.unpack(x)))
 						end
 						table.clear(data)
 					end

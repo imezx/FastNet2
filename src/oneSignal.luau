@@ -6,6 +6,7 @@ local oneSignal = {}
 oneSignal.ClassName = "oneSignal"
 oneSignal.__index = oneSignal
 
+local HttpService = game:GetService("HttpService")
 local Collections = {}
 
 local Debug = require(script.Parent.Debug)
@@ -18,6 +19,7 @@ function oneSignal.new(identifier: string)
 		Connected = false,
 		Identifier = identifier,
 		_ping = nil,
+		invokes = {},
 	}, oneSignal)
 	return Collections[identifier]
 end
@@ -35,13 +37,32 @@ function oneSignal:Connect(callback: (...any) -> ())
 	end
 end
 
+function oneSignal:Invoke(timeout: number, ...: any): any
+	if self then
+		timeout = math.max(1, timeout)
+		local thread, packed, retrive = coroutine.running(), { ... }, nil
+		local session = task.delay(timeout, function()
+			task.cancel(retrive)
+			task.spawn(thread, nil)
+			packed = nil
+		end)
+		retrive = task.spawn(function()
+			task.wait(1/60)
+			task.cancel(session)
+			task.spawn(thread, self.cb(table.unpack(packed)))
+			packed = nil
+		end)
+		return coroutine.yield()
+	end
+end
+
 function oneSignal:Wait(): number
 	if self then
 		local thread = coroutine.running()
 		local clock = os.clock()
 		self._ping = function(x)
 			self._ping = nil
-			coroutine.resume(thread, (x - clock))
+			task.spawn(thread, (x - clock))
 		end
 		return coroutine.yield()
 	end

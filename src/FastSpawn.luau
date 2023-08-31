@@ -2,7 +2,7 @@
 --!strict
 local Threads = {}
 
-local function passer(run, ...)
+local function passer(run, ...: any)
 	run(...)
 end
 
@@ -23,7 +23,7 @@ for i=1,250 do
 	coroutine.resume(Threads[i], Threads[i])
 end
 
-return function<_, params>(func: (params) -> (), ...: params)
+return function<T...>(func: (T...) -> (), ...: T...)
 	local thread: any
 	if #Threads > 0 and Threads[#Threads] then
 		thread = Threads[#Threads]

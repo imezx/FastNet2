@@ -102,16 +102,16 @@ function Server:Pull(expire: number, player: Player, ...: any)
 		if Process.verify(self.Identifier, player, requestId) then
 			table.remove(self.flag, requestId)
 		end
-		task.spawn(thread, nil) -- spawn thread to finish and return nil as failed to retreive due over-session (expired)
+		task.spawn(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
 	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
 		task.cancel(session)
-		task.spawn(thread, ...) -- spawn thread to finish and return data as successed
+		task.spawn(thread, ...) -- resume thread to finish and return data as successed
 	end
 	-- push new request
 	Process.newReq(self.Identifier, requestId, player, { ... })
-	return coroutine.yield() -- wait for response (yield)
+	return coroutine.yield() -- wait for return (yield)
 end
 
 Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets: any)
@@ -133,7 +133,7 @@ Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets
 				for Identifier, packet in secondPackets do
 					if Collections[Identifier] and Collections[Identifier].Connected then
 						for i, data in packet do
-							Process.pushback(Identifier, player.Name, i, Collections[Identifier].func(player, table.unpack(data)))
+							FastSpawn(Process.pushback, Identifier, player.Name, i, Collections[Identifier].func(player, table.unpack(data)))
 						end
 					else
 						-- throw to Process as pre-process
