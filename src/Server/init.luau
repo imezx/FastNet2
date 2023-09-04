@@ -6,23 +6,38 @@ local Process = require(script.Process)
 local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
 local Debug = require(script.Parent.Debug)
+local Util = require(script.Parent.Util)
 
 local Event = script.Parent:WaitForChild("Event")
 
 local Collections = {}
 
+--[[**
+	Create new Server Connection
+
+	@param Identifier The name of Connection (Identifier)
+
+	@returns metatable of connection
+**--]]
+
 function Server.new(Identifier: string)
 	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
-	Debug.new(not Identifiers.find(Identifier), string.format("[FastNet2]: %s already exist", Identifier))
-	Process.reg(Identifier)
-	Collections[Identifier] = setmetatable({
-		Identifier = Identifier,
+	Debug.new(not Identifiers.find(Util.hash(Identifier)), string.format("[FastNet2]: %s already exist", Identifier))
+	Process.reg(Util.hash(Identifier))
+	Collections[Util.hash(Identifier)] = setmetatable({
+		Identifier = Util.hash(Identifier),
 		func = function(...: any): (...any) end,
 		Connected = false,
 		flag = {},
 	}, Server)
-	return Collections[Identifier]
+	return Collections[Util.hash(Identifier)]
 end
+
+--[[**
+	Connect a connection
+
+	@param callback this must be a function with any arguments
+**--]]
 
 function Server:Connect(callback:  (...any) -> ())
 	if self then
@@ -33,6 +48,12 @@ function Server:Connect(callback:  (...any) -> ())
 	end
 end
 
+--[[**
+	Connect a connection (Luau Parralel)
+
+	@param callback this must be a function with any arguments
+**--]]
+
 function Server:ConnectParallel(callback:  (...any) -> ())
 	if self then
 		task.desynchronize()
@@ -41,11 +62,21 @@ function Server:ConnectParallel(callback:  (...any) -> ())
 	end
 end
 
+--[[**
+	Connect a connection
+
+	@param callback this must be a function with any arguments
+**--]]
+
 function Server:Listen(callback:  (...any) -> ())
 	if self then
 		self:Connect(callback)
 	end
 end
+
+--[[**
+	Wait Connection is being process
+**--]]
 
 function Server:Wait(): number
 	if self then
@@ -53,6 +84,12 @@ function Server:Wait(): number
 	end
 	return 0
 end
+
+--[[**
+	Connection a connection for once only
+	
+	@param callback this must be a function with any arguments
+**--]]
 
 function Server:Once(callback:  (...any) -> ())
 	if self and not self.Connected then
@@ -64,6 +101,10 @@ function Server:Once(callback:  (...any) -> ())
 	end
 end
 
+--[[**
+	Disconnect connection that is connected
+**--]]
+
 function Server:Disconnect()
 	if self and self.Connected then
 		self.Connected = false
@@ -71,6 +112,10 @@ function Server:Disconnect()
 		self.func = nil
 	end
 end
+
+--[[**
+	Distroy & Disconnect the connection
+**--]]
 
 function Server:Destroy()
 	self:Disconnect()
@@ -80,20 +125,43 @@ function Server:Destroy()
 	end
 end
 
+--[[**
+	Send/Fire to a connection
+	
+	@params player a Player Instance
+	@params ... any parameters to sent
+**--]]
+
 function Server:Fire(player: Player, ...: any)
 	Process.s_insert(self.Identifier, player, { ... })
 end
+
+--[[**
+	Send/Fire to a connection
+	
+	@params ... any parameters to sent
+**--]]
 
 function Server:Fires(...: any)
 	Process.insert(self.Identifier, { ... })
 end
 
-function Server:Pull(expire: number, player: Player, ...: any)
-	Debug.new(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
-	Debug.new(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
+
+--[[**
+	Invoke/Pull to a connection
+	
+	@params timeout this is a timeout/session limit argument
+	@params player a Player Instance
+	@params ... any parameters to sent
+**--]]
+
+function Server:Pull(timeout: number, player: Player, ...: any)
+	Debug.new(typeof(timeout) == "number", "[FastNet2]: expire argument must be a number.")
+	Debug.new(timeout > 1, "[FastNet2]: expire argument must be minimum 2.")
 	Debug.new(player:IsA("Player"), "[FastNet2]: player argument must be a Player.")
+	Debug.new(#{...} > 0, "[FastNet2]: Unable to invoke without data")
 	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
-	local session = task.delay(expire, function()
+	local session = task.delay(timeout, function()
 		-- session expire
 		-- removing and clear entire requests point
 		if self.flag[requestId] then

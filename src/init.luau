@@ -1,34 +1,47 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc9 (0.9.0)
+-- version rc9 (0.9.1)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
 FastNet2.version = 0.9
 
-local IsServer = game:GetService("RunService"):IsServer()
+local IsServer: boolean = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
+
 local Debug = require(script.Debug)
+local Signal = require(script.oneSignal)
+local Util = require(script.Util)
 
 if not script:FindFirstChild("Event") then
 	Instance.new("RemoteEvent", script).Name = "Event"
 end
 
-local Signal = require(script.oneSignal)
+--[[**
+	Custom Signal a alternative of BindableEvent (oneSignal, oneSignal.luau)
 
--- Custom Signal a alternative of BindableEvent (oneSignal, oneSignal.luau)
+	@param Identifier The name of Signal (Identifier)
+
+	@returns Signal
+**--]]
+
 function FastNet2.Signal(Identifier: string): typeof(Signal)
-	local Is, signal = pcall(function()
-		return Signal.new(Identifier)
-	end)
-	if not Is then
+	local success, signal = pcall(function()
 		return Signal.get(Identifier)
+	end)
+	if not success then
+		return Signal.new(Identifier)
 	end
 	return signal
 end
 
--- Check Update (version build) available
+--[[**
+
+	Check Update of FastNet2 Module through HttpService to Github
+
+**--]]
+
 function FastNet2.CheckUpdate()
 	Debug.new(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.")
 	local success: boolean, receive: number = pcall(function()
@@ -45,14 +58,35 @@ function FastNet2.CheckUpdate()
 	return warn("[FastNet2]: Module is up-to-date.")
 end
 
--- Create new UUID (Universally Unique Identifier)
+--[[**
+
+	Create a Universal Unique Identifier (UUID)
+
+**--]]
+
 function FastNet2.CreateUUID(): string
-	return string.gsub(HttpService:GenerateGUID(false), "-", "") :: string
+	return Util.CreateUUID()
 end
+
+--[[**
+
+	Enable/Disable FastNet2 Debugging
+	
+	@params opt this argument is going to enable/disable with boolean type
+
+**--]]
 
 function FastNet2.Debug(opt: boolean)
 	return Debug._debug(opt)
 end
+
+--[[**
+
+	Receive all fastnet2 debug logs
+	
+	@returns all debugging logs
+
+**--]]
 
 function FastNet2.debugs()
 	return Debug.receiveAll()

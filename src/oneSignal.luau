@@ -39,6 +39,8 @@ end
 
 function oneSignal:Invoke(timeout: number, ...: any): any
 	if self then
+		Debug.new(typeof(timeout) == "number", string.format("[oneSignal]: timeout must be number, got %s", typeof(timeout)))
+		Debug.new(#{...} > 0, "[oneSignal]: Unable to invoke without data")
 		timeout = math.max(1, timeout)
 		local thread, packed, retrive = coroutine.running(), { ... }, nil
 		local session = task.delay(timeout, function()

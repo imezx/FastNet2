@@ -3,6 +3,14 @@
 [Refresh]
 - Reupdate existing version
 
+[RC9 - 0.9.1]
+- Add Documentation comments
+- Add Util.luau
+- Add Hash function to Util.luau
+- Moved .CreateUUID function to Util.luau
+- Connection Identifier is now converted to hash using Hash function from Util.luau
+- Other minor changes
+
 [RC9 - 0.9.0]
 - Improved Invoke/Pull System on SERVER & CLIENT (upto 5x faster)
 - Added :Invoke (function) for Signal (oneSignal)

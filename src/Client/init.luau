@@ -2,37 +2,59 @@
 local Client = {}
 Client.__index = Client
 
+local HttpService = game:GetService("HttpService")
+
 local Process = require(script.Process)
 local Identifiers = require(script.Identifier)
 local FastSpawn = require(script.Parent.FastSpawn)
 local Debug = require(script.Parent.Debug)
+local Util = require(script.Parent.Util)
 
 local Event = script.Parent:WaitForChild("Event")
 
 local Collections = {}
 
+--[[**
+	Create new Client Connection
+
+	@param Identifier The name of Connection (Identifier)
+
+	@returns metatable of connection
+**--]]
+
 function Client.new(Identifier: string)
 	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
-	Debug.new(not Identifiers.find(Identifier), string.format("[FastNet2]: %s already exist", Identifier))
-	Process.reg(Identifier)
-	Collections[Identifier] = setmetatable({
-		Identifier = Identifier,
-		func = {},
+	Debug.new(not Identifiers.find(Util.hash(Identifier)), string.format("[FastNet2]: %s already exist", Identifier))
+	Process.reg(Util.hash(Identifier))
+	Collections[Util.hash(Identifier)] = setmetatable({
+		Identifier = Util.hash(Identifier),
+		func = function(...: any): (...any) end,
 		Connected = false,
 		flag = {},
-		_id = nil,
 	}, Client)
-	return Collections[Identifier]
+	return Collections[Util.hash(Identifier)]
 end
+
+--[[**
+	Connect a connection
+
+	@param callback this must be a function with any arguments
+**--]]
 
 function Client:Connect(callback: (...any) -> ())
 	if self then
-		--Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
+		Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
 		self.func = callback
 		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
 	end
 end
+
+--[[**
+	Connect a connection (Luau Parralel)
+
+	@param callback this must be a function with any arguments
+**--]]
 
 function Client:ConnectParallel(callback:  (...any) -> ())
 	if self then
@@ -42,11 +64,21 @@ function Client:ConnectParallel(callback:  (...any) -> ())
 	end
 end
 
+--[[**
+	Connect a connection
+
+	@param callback this must be a function with any arguments
+**--]]
+
 function Client:Listen(callback:  (...any) -> ())
 	if self then
 		self:Connect(callback)
 	end
 end
+
+--[[**
+	Wait Connection is being process
+**--]]
 
 function Client:Wait(): number
 	if self then
@@ -54,6 +86,12 @@ function Client:Wait(): number
 	end
 	return 0
 end
+
+--[[**
+	Connection a connection for once only
+	
+	@param callback this must be a function with any arguments
+**--]]
 
 function Client:Once(callback:  (...any) -> ())
 	if self and not self.Connected then
@@ -65,6 +103,10 @@ function Client:Once(callback:  (...any) -> ())
 	end
 end
 
+--[[**
+	Disconnect connection that is connected
+**--]]
+
 function Client:Disconnect()
 	if self and self.Connected then
 		self.Connected = false
@@ -72,6 +114,10 @@ function Client:Disconnect()
 		self.func = nil
 	end
 end
+
+--[[**
+	Distroy & Disconnect the connection
+**--]]
 
 function Client:Destroy()
 	self:Disconnect()
@@ -81,6 +127,12 @@ function Client:Destroy()
 	end
 end
 
+--[[**
+	Send/Fire to a connection
+	
+	@params ... any parameters to sent
+**--]]
+
 function Client:Fire(...: any)
 	Process.insert(self.Identifier, { ... })
 end
@@ -89,11 +141,19 @@ function Client:Fires(...: any)
 	warn("[FastNet2]: 'Fires' only can be used on server.")
 end
 
-function Client:Pull(expire: number, ...: any)
-	Debug.new(typeof(expire) == "number", "[FastNet2]: expire argument must be a number.")
-	Debug.new(expire > 1, "[FastNet2]: expire argument must be minimum 2.")
+--[[**
+	Invoke/Pull to a connection
+	
+	@params timeout this is a timeout/session limit argument
+	@params ... any parameters to sent
+**--]]
+
+function Client:Pull(timeout: number, ...: any)
+	Debug.new(typeof(timeout) == "number", "[FastNet2]: expire argument must be a number.")
+	Debug.new(timeout > 1, "[FastNet2]: expire argument must be minimum 2.")
+	Debug.new(#{...} > 0, "[FastNet2]: Unable to invoke without data")
 	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
-	local session = task.delay(expire, function()
+	local session = task.delay(timeout, function()
 		-- session expire
 		-- removing and clear entire requests point
 		if self.flag[requestId] then

@@ -1,5 +1,6 @@
 -- FastSpawn & FreeThreads
 --!strict
+
 local Threads = {}
 
 local function passer(run, ...: any)
@@ -24,14 +25,13 @@ for i=1,250 do
 end
 
 return function<T...>(func: (T...) -> (), ...: T...)
-	local thread: any
-	if #Threads > 0 and Threads[#Threads] then
-		thread = Threads[#Threads]
+	if Threads[#Threads] then
+		task.spawn(Threads[#Threads], func, ...)
 		Threads[#Threads] = nil
 	else
-		thread = coroutine.create(runner)
+		local thread: any = coroutine.create(runner)
 		coroutine.resume(thread, thread)
+		task.spawn(thread, func, ...)
+		thread = nil
 	end
-	task.spawn(thread, func, ...)
-	thread = nil
 end
