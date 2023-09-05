@@ -40,6 +40,8 @@ export default defineConfig({
   title: "FastNet2",
   description: "FastNet2 - a Incredible and Powerful networking library for ROBLOX Games",
   lang: 'en-US',
+  cleanUrls: true,
+  outDir: './',
   themeConfig: {
     nav: nav(),
     sidebar: side(),
