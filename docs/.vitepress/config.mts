@@ -37,11 +37,12 @@ function side() {
 }
 
 export default defineConfig({
-  assetsDir: '/FastNet2/assets/',
   title: "FastNet2",
   description: "FastNet2 - a Incredible and Powerful networking library for ROBLOX Games",
   lang: 'en-US',
+  base: "/FastNet2",
   cleanUrls: true,
+  assetsDir: '/assets',
   themeConfig: {
     nav: nav(),
     sidebar: side(),
