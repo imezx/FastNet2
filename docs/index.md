@@ -2,6 +2,8 @@
 layout: home
 
 hero:
+  image:
+    src: "/icon.png"
   name: "FastNet2"
   text: "A incredible and power networking module for roblox games."
   actions:
