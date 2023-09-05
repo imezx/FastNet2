@@ -17,8 +17,6 @@ jobs:
         with:
           node-version: 16
           cache: npm
-      - name: Build
-        run: npm run docs:build
       - uses: actions/configure-pages@v2
       - name: Deploy
         id: deployment
@@ -26,3 +24,5 @@ jobs:
       - uses: actions/upload-pages-artifact@v1
         with:
           path: docs/.vitepress/dist
+      - name: Build
+        run: npm run docs:build
