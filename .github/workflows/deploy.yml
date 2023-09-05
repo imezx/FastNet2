@@ -5,18 +5,21 @@ on:
     branches:
       - master
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 concurrency:
   group: pages
   cancel-in-progress: false
 
 jobs:
-  build:
+  deploy:
+    name: Build & Deploy
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -31,35 +34,12 @@ jobs:
         uses: actions/configure-pages@v3
       - name: Install dependencies
         run: npm ci
-      - name: Build with VitePress
+      - name: Build
         run: |
           npm run docs:build
+          touch docs/.vitepress/dist
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
-        with:
-          path: docs/.vitepress/dist
-  deploy:
-    name: Deploy
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-node@v3
-        with:
-          node-version: 16
-          cache: npm
-      - uses: actions/configure-pages@v3
-      - name: Install package
-        run: npm install
-      - name: Add Vitepress
-        run: npm add -D vitepress
-      - name: Build
-        run: npm run docs:build
-      - uses: actions/upload-pages-artifact@v2
         with:
           path: docs/.vitepress/dist
       - name: Deploy
