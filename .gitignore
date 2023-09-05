@@ -1,6 +1,3 @@
-# Project place file
-/FastNet2.rbxlx
-
-# Roblox Studio lock files
-/*.rbxlx.lock
-/*.rbxl.lock
+node_modules
+docs/.vitepress/dist
+docs/.vitepress/cache
