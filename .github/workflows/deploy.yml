@@ -23,8 +23,8 @@ jobs:
           node-version: 16
           cache: npm
       - uses: actions/configure-pages@v3
-      - name: Add Vitepress
-        run: npm add -D vitepress
+      - name: Install package
+        run: npm install
       - name: Build
         run: npm run docs:build
       - uses: actions/upload-pages-artifact@v2
