@@ -94,7 +94,7 @@ Invoke is a function that invoke to signal.
 ```
 
 ```lua
-local Request = Signal:Pull(2, "Hello World!")
+local Request = Signal:Invoke(2, "Hello World!")
 ```
 
 ::: warning
