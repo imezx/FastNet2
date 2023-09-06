@@ -1,5 +1,5 @@
 <div align="center">
-	<img src="docs/public/favicon.png" alt="FastNet2 icon" />
+	<img src="docs/public/header.png" alt="FastNet2 icon" />
     <h1><span style="color:blue;">FastNet2</span></h1>
     <p><h1>A incredible and power networking module for roblox games.</h1></p>
 </div>
