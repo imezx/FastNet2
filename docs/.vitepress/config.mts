@@ -44,14 +44,15 @@ export default defineConfig({
     ['link', { rel: 'icon', href: '/favicon.png' }],
   ],
   base: "/FastNet2",
-  cleanUrls: true,
   assetsDir: '/assets',
+  cleanUrls: true,
   themeConfig: {
-		logo: '/icon.ico',
+    logo: '/icon.ico',
     nav: nav(),
     sidebar: side(),
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/imezx/FastNet2' }
+      { icon: 'github', link: 'https://github.com/imezx/FastNet2' },
+      { icon: 'discord', link: 'https://discord.gg/qnSfEZ6bZK' },
     ]
   }
 })
