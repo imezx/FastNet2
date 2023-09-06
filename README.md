@@ -1,6 +1,6 @@
 <div align="center">
 	<img src="docs/public/favicon.png" alt="FastNet2 icon" />
-    <h1><span style="-webkit-background-clip: text; background-clip: text; background: -webkit-linear-gradient(120deg, #6034fe 30%, #fe3434); -webkit-text-fill-color: transparent;">FastNet2</span></h1>
+    <h1><span style="color:#00afff;">FastNet2</span></h1>
     <p><h1>A incredible and power networking module for roblox games.</h1></p>
 </div>
 
