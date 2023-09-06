@@ -41,7 +41,7 @@ export default defineConfig({
   description: "FastNet2 - a Incredible and Powerful networking library for ROBLOX Games",
   lang: 'en-US',
   head: [
-    ['link', { rel: 'icon', href: '/icon.ico' }],
+    ['link', { rel: 'icon', href: '/favicon.png' }],
   ],
   base: "/FastNet2",
   cleanUrls: true,
