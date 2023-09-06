@@ -40,12 +40,10 @@ end
 **--]]
 
 function Server:Connect(callback:  (...any) -> ())
-	if self then
-		Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
-		self.func = callback
-		Process.reg_pre_f(self.Identifier, callback)
-		self.Connected = true
-	end
+	Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
+	self.func = callback
+	Process.reg_pre_f(self.Identifier, callback)
+	self.Connected = true
 end
 
 --[[**
@@ -55,11 +53,9 @@ end
 **--]]
 
 function Server:ConnectParallel(callback:  (...any) -> ())
-	if self then
-		task.desynchronize()
-		self:Connect(callback)
-		task.synchronize()
-	end
+	task.desynchronize()
+	self:Connect(callback)
+	task.synchronize()
 end
 
 --[[**
@@ -69,9 +65,7 @@ end
 **--]]
 
 function Server:Listen(callback:  (...any) -> ())
-	if self then
-		self:Connect(callback)
-	end
+	self:Connect(callback)
 end
 
 --[[**
@@ -79,10 +73,7 @@ end
 **--]]
 
 function Server:Wait(): number
-	if self then
-		return Process._ping(self.Identifier)
-	end
-	return 0
+	return Process._ping(self.Identifier)
 end
 
 --[[**
@@ -92,7 +83,7 @@ end
 **--]]
 
 function Server:Once(callback:  (...any) -> ())
-	if self and not self.Connected then
+	if not self.Connected then
 		self.func = function(...)
 			self:Disconnect()
 			task.spawn(callback, ...)
@@ -106,7 +97,7 @@ end
 **--]]
 
 function Server:Disconnect()
-	if self and self.Connected then
+	if self.Connected then
 		self.Connected = false
 		Process.unreg_pre_f(self.Identifier)
 		self.func = nil
@@ -119,10 +110,8 @@ end
 
 function Server:Destroy()
 	self:Disconnect()
-	if self then
-		Process.unreg(self.Identifier)
-		self = setmetatable(self, nil)
-	end
+	Process.unreg(self.Identifier)
+	setmetatable(self, nil)
 end
 
 --[[**

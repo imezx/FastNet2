@@ -29,15 +29,15 @@ Listen an event to signal.
 Each signal event only allowed have one callback.
 
 ```lua
-Remote:Connect(function(...)
+Signal:Connect(function(...)
 	print(...)
 end)
 ```
 
-to know if the event is connected or not by doing `.Connected`
+to know if the signal is connected or not by doing `.Connected`
 
 ```lua
-print(Remote.Connected)
+print(Signal.Connected)
 ```
 
 ## `:Once`
@@ -51,22 +51,22 @@ This function is same as `:Connect` but it disconnect the signal once it fired.
 ```
 
 ```lua
-Remote:Once(function(...)
+Signal:Once(function(...)
 	print(...)
 end)
 ```
 
 ## `:Disconnect`
 
-Disconnect the event
+Disconnect the signal
 
 ```lua
-Remote:Disconnect()
+Signal:Disconnect()
 ```
 
 ## `:Fire`
 
-Fire the event to the server with data.
+Fire the signal with data.
 
 ```lua
 (
@@ -75,7 +75,7 @@ Fire the event to the server with data.
 ```
 
 ```lua
-Remote:Fire("Hello World!")
+Signal:Fire("Hello World!")
 ```
 
 ::: warning
@@ -84,7 +84,7 @@ This function have rate limiting to prevent spamming
 
 ## `:Invoke`
 
-Invoke is a function that invoke to server.
+Invoke is a function that invoke to signal.
 
 ```lua
 (
@@ -94,7 +94,7 @@ Invoke is a function that invoke to server.
 ```
 
 ```lua
-local Request = Remote:Pull(2, "Hello World!")
+local Request = Signal:Pull(2, "Hello World!")
 ```
 
 ::: warning
@@ -103,10 +103,10 @@ This function is yielded, and this function still on beta
 
 ## `:Wait`
 
-Wait the event that triggered/pinged
+Wait the signal that triggered/pinged
 
 ```lua
-Remote:Wait()
+Signal:Wait()
 ```
 
 ::: warning
@@ -115,8 +115,8 @@ This function is yielded
 
 ## `:Destroy`
 
-Disconnect the event and Remove the event from FastNet2
+Disconnect the signal and remove the signal
 
 ```lua
-Remote:Destroy()
+Signal:Destroy()
 ```
