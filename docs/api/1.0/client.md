@@ -6,57 +6,64 @@ A Client-sided Connection
 
 Create new FastNet2 event
 
-```lua
+::: code-group
+```lua [main]
 (
 	Identifier: string
 )
 ```
 
-Identifier will converte/encode into hash identifier
-
-```lua
+```lua [Example]
 local Remote = FastNet2.new("Remote")
 ```
+:::
+
+Identifier will converte/encode into hash identifier
 
 ## `:Connect` or `:Listen`
 
 Listen an event from the server to receive, `:Connect` and `:Listen` is the same function.
 
-```lua
+::: code-group
+```lua [main]
 (
+	player: Player,
 	callback: (...any) -> ()
 )
 ```
 
-Each event only allowed have one callback.
-
-```lua
-Remote:Connect(function(...)
+```lua [Example]
+Remote:Connect(function(player, ...)
 	print(...)
 end)
 ```
 
-to know if the event is connected or not by doing `.Connected`
-
-```lua
+```lua [Extra]
+-- to know if the event is connected or not by doing `.Connected`
 print(Remote.Connected)
 ```
+:::
+
+Each event only allowed have one callback.
 
 ## `:Once`
 
 This function is same as `:Connect` but it disconnect the event once it fired.
 
-```lua
+::: code-group
+```lua [main]
 (
+	player: Player,
 	callback: (...any) -> ()
 )
 ```
 
-```lua
-Remote:Once(function(...)
+```lua [Example]
+Remote:Once(function(player, ...)
 	print(...)
 end)
 ```
+:::
 
 ## `:Disconnect`
 
@@ -68,17 +75,19 @@ Remote:Disconnect()
 
 ## `:Fire`
 
-Fire the event to the server with data.
+Fire the event to the spesific server with data.
 
-```lua
+::: code-group
+```lua [main]
 (
 	...: any
 )
 ```
 
-```lua
+```lua [Example]
 Remote:Fire("Hello World!")
 ```
+:::
 
 ::: warning
 This function have rate limiting to prevent spamming
@@ -88,16 +97,18 @@ This function have rate limiting to prevent spamming
 
 Pull is a function that invoke to server.
 
-```lua
+::: code-group
+```lua [main]
 (
 	timeout: number,
 	...: any
 ) -> (...any)
 ```
 
-```lua
+```lua [Example]
 local Request = Remote:Pull(2, "Hello World!")
 ```
+:::
 
 ::: warning
 This function is yielded, and the minimum for timeout is 2 (seconds)

@@ -6,58 +6,64 @@ A Server-sided Connection
 
 Create new FastNet2 event
 
-```lua
+::: code-group
+```lua [main]
 (
 	Identifier: string
 )
 ```
 
-Identifier will converte/encode into hash identifier
-
-```lua
+```lua [Example]
 local Remote = FastNet2.new("Remote")
 ```
+:::
+
+Identifier will converte/encode into hash identifier
 
 ## `:Connect` or `:Listen`
 
-Listen an event from the server to receive, `:Connect` and `:Listen` is the same function.
+Listen an event from the client to receive, `:Connect` and `:Listen` is the same function.
 
-```lua
+::: code-group
+```lua [main]
 (
 	player: Player,
 	callback: (...any) -> ()
 )
 ```
 
-Each event only allowed have one callback.
-
-```lua
+```lua [Example]
 Remote:Connect(function(player, ...)
 	print(...)
 end)
 ```
 
-to know if the event is connected or not by doing `.Connected`
-
-```lua
+```lua [Extra]
+-- to know if the event is connected or not by doing `.Connected`
 print(Remote.Connected)
 ```
+:::
+
+Each event only allowed have one callback.
+
 ## `:Once`
 
 This function is same as `:Connect` but it disconnect the event once it fired.
 
-```lua
+::: code-group
+```lua [main]
 (
 	player: Player,
 	callback: (...any) -> ()
 )
 ```
 
-```lua
+```lua [Example]
 Remote:Once(function(player, ...)
 	print(...)
 end)
 ```
+:::
 
 ## `:Disconnect`
 
@@ -71,44 +77,41 @@ Remote:Disconnect()
 
 Fire the event to the spesific client with data.
 
-```lua
+::: code-group
+```lua [main]
 (
     player: Player,
 	...: any
 )
 ```
 
-```lua
+```lua [Example]
 Remote:Fire(player, "Hello World!")
 ```
-
-::: warning
-This function have rate limiting to prevent spamming
 :::
 
-## `:Fires`
+## `:Fires` <Badge type="tip" text="Server Only" />
 
 Fire the event to all clients with data.
 
-```lua
+::: code-group
+```lua [main]
 (
 	...: any
 )
 ```
 
-```lua
+```lua [Example]
 Remote:Fires("Hello World!")
 ```
-
-::: warning
-This function have rate limiting to prevent spamming
 :::
 
 ## `:Pull`
 
-Pull is a function that invoke to server.
+Pull is a function that invoke to client.
 
-```lua
+::: code-group
+```lua [main]
 (
 	timeout: number,
     player: Player,
@@ -116,9 +119,10 @@ Pull is a function that invoke to server.
 ) -> (...any)
 ```
 
-```lua
+```lua [Example]
 local Request = Remote:Pull(2, player, "Hello World!")
 ```
+:::
 
 ::: warning
 This function is yielded, and the minimum for timeout is 2 (seconds)

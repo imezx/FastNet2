@@ -2,9 +2,8 @@
 
 Let's try and play something with FastNet2!
 
-## Server-Side
-
-```lua
+::: code-group
+```lua [Server]
 local FastNet2 = require("path.to.module")
 
 -- Events
@@ -27,9 +26,7 @@ Ping:Connect(function(player, ping)
 end)
 ```
 
-## Client-Side
-
-```lua
+```lua [Client]
 local Players = game:GetService("Players")
 local FastNet2 = require("path.to.module")
 

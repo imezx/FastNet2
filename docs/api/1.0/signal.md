@@ -6,55 +6,60 @@ Signal (an alternative for bindable events)
 
 Create new Signal event
 
-```lua
+::: code-group
+```lua [main]
 (
 	Identifier: string
 )
 ```
 
-```lua
+```lua [Example]
 local Signal = FastNet2.Signal("TestSignal")
 ```
+:::
 
 ## `:Connect`
 
 Listen an event to signal.
 
-```lua
+::: code-group
+```lua [main]
 (
 	callback: (...any) -> ()
 )
 ```
 
-Each signal event only allowed have one callback.
-
-```lua
+```lua [Example]
 Signal:Connect(function(...)
 	print(...)
 end)
 ```
 
-to know if the signal is connected or not by doing `.Connected`
-
-```lua
+```lua [Extra]
+-- to know if the signal is connected or not by doing `.Connected`
 print(Signal.Connected)
 ```
+:::
+
+Each signal event only allowed have one callback.
 
 ## `:Once`
 
 This function is same as `:Connect` but it disconnect the signal once it fired.
 
-```lua
+::: code-group
+```lua [main]
 (
 	callback: (...any) -> ()
 )
 ```
 
-```lua
+```lua [Example]
 Signal:Once(function(...)
 	print(...)
 end)
 ```
+:::
 
 ## `:Disconnect`
 
@@ -68,37 +73,37 @@ Signal:Disconnect()
 
 Fire the signal with data.
 
-```lua
+::: code-group
+```lua [main]
 (
 	...: any
 )
 ```
 
-```lua
+```lua [Example]
 Signal:Fire("Hello World!")
 ```
-
-::: warning
-This function have rate limiting to prevent spamming
 :::
 
 ## `:Invoke`
 
 Invoke is a function that invoke to signal.
 
-```lua
+::: code-group
+```lua [main]
 (
 	timeout: number,
 	...: any
 ) -> (...any)
 ```
 
-```lua
+```lua [Example]
 local Request = Signal:Invoke(2, "Hello World!")
 ```
+:::
 
 ::: warning
-This function is yielded, and this function still on beta
+This function is yielded
 :::
 
 ## `:Wait`

@@ -1,4 +1,4 @@
-# FastNet2
+# FastNet2  <Badge type="tip" text="Beta" />
 
 The public main of the FastNet2 library.
 
