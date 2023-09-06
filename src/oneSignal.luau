@@ -12,8 +12,8 @@ local Collections = {}
 local Debug = require(script.Parent.Debug)
 
 function oneSignal.new(identifier: string)
-	Debug.new(typeof(identifier) == "string", "[oneSignal]: Identifier must be string")
-	Debug.new(not Collections[identifier], string.format("[oneSignal]: %s already exist", identifier))
+	Debug.new(typeof(identifier) == "string", "[oneSignal]: Identifier must be string", 0)
+	Debug.new(not Collections[identifier], string.format("[oneSignal]: %s already exist", identifier), 0)
 	Collections[identifier] = setmetatable({
 		cb = nil,
 		Connected = false,
@@ -25,13 +25,13 @@ function oneSignal.new(identifier: string)
 end
 
 function oneSignal.get(identifier: string)
-	Debug.new(Collections[identifier], string.format("[oneSignal]: %s not exist", identifier))
+	Debug.new(Collections[identifier], string.format("[oneSignal]: %s not exist", identifier), 0)
 	return Collections[identifier]
 end
 
 function oneSignal:Connect(callback: (...any) -> ())
 	if self then
-		Debug.new(not self.Connected, string.format("[oneSignal]: %s already connected", self.Identifier))
+		Debug.new(not self.Connected, string.format("[oneSignal]: %s already connected", self.Identifier), 0)
 		self.cb = callback
 		self.Connected = true
 	end
@@ -39,8 +39,8 @@ end
 
 function oneSignal:Invoke(timeout: number, ...: any): any
 	if self then
-		Debug.new(typeof(timeout) == "number", string.format("[oneSignal]: timeout must be number, got %s", typeof(timeout)))
-		Debug.new(#{...} > 0, "[oneSignal]: Unable to invoke without data")
+		Debug.new(typeof(timeout) == "number", string.format("[oneSignal]: timeout must be number, got %s", typeof(timeout)), 0)
+		Debug.new(#{...} > 0, "[oneSignal]: Unable to invoke without data", 0)
 		timeout = math.max(1, timeout)
 		local thread, packed, retrive = coroutine.running(), { ... }, nil
 		local session = task.delay(timeout, function()

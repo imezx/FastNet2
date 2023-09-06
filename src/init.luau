@@ -43,7 +43,7 @@ end
 **--]]
 
 function FastNet2.CheckUpdate()
-	Debug.new(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.")
+	Debug.new(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.", 1)
 	local success: boolean, receive: number = pcall(function()
 		return tonumber(
 			HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)

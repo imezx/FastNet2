@@ -23,8 +23,8 @@ local Collections = {}
 **--]]
 
 function Client.new(Identifier: string)
-	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string")
-	Debug.new(not Identifiers.find(Util.hash(Identifier)), string.format("[FastNet2]: %s already exist", Identifier))
+	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string", 0)
+	Debug.new(not Identifiers.find(Util.hash(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
 	Process.reg(Util.hash(Identifier))
 	Collections[Util.hash(Identifier)] = setmetatable({
 		Identifier = Util.hash(Identifier),
@@ -42,7 +42,7 @@ end
 **--]]
 
 function Client:Connect(callback: (...any) -> ())
-	Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier))
+	Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier), 0)
 	self.func = callback
 	Process.reg_pre_f(self.Identifier, callback)
 	self.Connected = true
@@ -140,9 +140,9 @@ end
 **--]]
 
 function Client:Pull(timeout: number, ...: any)
-	Debug.new(typeof(timeout) == "number", "[FastNet2]: expire argument must be a number.")
-	Debug.new(timeout > 1, "[FastNet2]: expire argument must be minimum 2.")
-	Debug.new(#{...} > 0, "[FastNet2]: Unable to invoke without data")
+	Debug.new(typeof(timeout) == "number", "[FastNet2]: expire argument must be a number.", 0)
+	Debug.new(timeout > 1, "[FastNet2]: expire argument must be minimum 2.", 0)
+	Debug.new(#{...} > 0, "[FastNet2]: Unable to invoke without data", 0)
 	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
 	local session = task.delay(timeout, function()
 		-- session expire

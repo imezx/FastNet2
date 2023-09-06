@@ -39,7 +39,7 @@ function ClientProcess.unreg(Identifier: string)
 end
 
 function ClientProcess.insert(Identifier: string, obj)
-	if not Debug.new(Collections[Identifier].OutgoingOrder < ClientProcess.rateLimit, "[FastNet2]: Unable to call :Fire (rate-limit reached)") then return end
+	if not Debug.new(Collections[Identifier].OutgoingOrder < ClientProcess.rateLimit, "[FastNet2]: Unable to call :Fire (rate-limit reached)", 1) then return end
 	Collections[Identifier].OutgoingOrder += 1
 	Outgoing[Identifier][Collections[Identifier].OutgoingOrder] = obj
 end
