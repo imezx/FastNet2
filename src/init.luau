@@ -1,7 +1,7 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc9 (0.9.1)
+-- version rc9 (0.9.2)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
@@ -70,25 +70,13 @@ end
 
 --[[**
 
-	Enable/Disable FastNet2 Debugging
-	
-	@params opt this argument is going to enable/disable with boolean type
-
-**--]]
-
-function FastNet2.Debug(opt: boolean)
-	return Debug._debug(opt)
-end
-
---[[**
-
 	Receive all fastnet2 debug logs
 	
 	@returns all debugging logs
 
 **--]]
 
-function FastNet2.debugs()
+function FastNet2.debugLogs()
 	return Debug.receiveAll()
 end
 

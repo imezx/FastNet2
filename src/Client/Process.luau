@@ -1,7 +1,7 @@
 --!strict
 local ClientProcess = {}
-ClientProcess.processLimit = 250 -- max rate process limit (default: 250)
-ClientProcess.rateLimit = 150 -- max rate limit (default: 150)
+ClientProcess.processLimit = 500 -- max rate process limit (default: 250)
+ClientProcess.rateLimit = 500 -- max rate limit (default: 150)
 ClientProcess.maxFreeze = 1 -- max duration freezing reaching rate limit (default: 1)
 
 local RunService = game:GetService("RunService")
@@ -88,10 +88,9 @@ function ClientProcess.unreg_pre_f(Identifier: string)
 end
 
 function ClientProcess.__start()
-	local outQueue, outIndex = {}, 0
-	local outRequestQueue, outRequestIndex = {}, 0
-	local throwRequest, throwIndex = {}, 0
-
+	local outQueue: { [string]: {any} }, outIndex: number = {}, 0
+	local outRequestQueue: { [string]: {any} }, outRequestIndex: number = {}, 0
+	local throwRequest: { [string]: {any} }, throwIndex: number = {}, 0
 	RunService.PostSimulation:Connect(function()
 		-- Sent queues to server
 		if outIndex > 0 then
@@ -142,29 +141,30 @@ function ClientProcess.__start()
 							net.OutgoingOrder -= 1
 							table.remove(Outgoing[Identifier], i)
 						end
+						if #outQueue[Identifier] > 0 then
+							outIndex += 1
+						end
 					end
 				else
 					outQueue[Identifier] = Outgoing[Identifier]
 					net.OutgoingOrder = 0
-					Outgoing[Identifier] = {}
-				end
-				if #outQueue[Identifier] > 0 then
 					outIndex += 1
+					Outgoing[Identifier] = {}
 				end
 			end
 			-- Request to Queue
 			if net.req_i > 0 then
 				outRequestQueue[Identifier] = net.requests
 				net.req_i = 0
-				net.requests = {}
 				outRequestIndex += 1
+				net.requests = {}
 			end
 			-- Return Requests
 			if net.re_req_i > 0 then
 				throwRequest[Identifier] = net.returnRequest
 				net.re_req_i = 0
-				net.returnRequest = {}
 				throwIndex += 1
+				net.returnRequest = {}
 			end
 			-- Ping :Wait()
 			if net._ping then

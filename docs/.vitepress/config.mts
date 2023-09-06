@@ -5,7 +5,7 @@ function nav() {
     {
       text: 'API Reference',
       items: [
-        { text: '1.0', link: '/api/1.0/server' }
+        { text: '1.0', link: '/api/1.0/fastnet2' }
       ]
     }
   ]
@@ -17,8 +17,10 @@ function side() {
       {
         text: 'API Reference',
         items: [
+          { text: 'FastNet2', link: '/api/1.0/fastnet2' },
           { text: 'Server', link: '/api/1.0/server' },
           { text: 'Client', link: '/api/1.0/client' },
+          { text: 'Signal', link: '/api/1.0/signal' },
         ]
       }
     ],

@@ -98,8 +98,8 @@ function ServerProcess.unreg_pre_f(Identifier: string)
 end
 
 function ServerProcess.__start()
-	local outQueue, outIndex = {}, 0
-	local outSQueue, outSIndex = {}, 0
+	local outQueue: { [string]: {any} }, outIndex: number = {}, 0
+	local outSQueue: { [string]: {any} }, outSIndex: number = {}, 0
 	RunService.PostSimulation:Connect(function()
 		-- Sent all data to client (Multiple Players)
 		if outIndex > 0 then
@@ -108,10 +108,10 @@ function ServerProcess.__start()
 			table.clear(outQueue)
 		end
 		if outSIndex > 0 then
-			for player, packet in pairs(outSQueue) do
+			for player, packet in outSQueue do
 				if player and Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
-					Event:FireClient(Players[player], packet)
 					outSIndex -= 1
+					Event:FireClient(Players[player], packet)
 					table.clear(packet)
 				end
 			end

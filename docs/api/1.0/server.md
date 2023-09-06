@@ -24,6 +24,7 @@ Listen an event from the server to receive, `:Connect` and `:Listen` is the same
 
 ```lua
 (
+	player: Player,
 	callback: (...any) -> ()
 )
 ```
@@ -31,7 +32,7 @@ Listen an event from the server to receive, `:Connect` and `:Listen` is the same
 Each event only allowed have one callback.
 
 ```lua
-Remote:Connect(function(...)
+Remote:Connect(function(player, ...)
 	print(...)
 end)
 ```
@@ -40,6 +41,22 @@ to know if the event is connected or not by doing `.Connected`
 
 ```lua
 print(Remote.Connected)
+```
+## `:Once`
+
+This function is same as `:Connect` but it disconnect the event once it fired.
+
+```lua
+(
+	player: Player,
+	callback: (...any) -> ()
+)
+```
+
+```lua
+Remote:Once(function(player, ...)
+	print(...)
+end)
 ```
 
 ## `:Disconnect`

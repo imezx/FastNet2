@@ -1,10 +1,10 @@
-# Client
+# Signal
 
-A Client-sided Connection
+Signal (an alternative for bindable events)
 
-## `.new`
+## `.Signal`
 
-Create new FastNet2 event
+Create new Signal event
 
 ```lua
 (
@@ -12,15 +12,13 @@ Create new FastNet2 event
 )
 ```
 
-Identifier will converte/encode into hash identifier
-
 ```lua
-local Remote = FastNet2.new("Remote")
+local Signal = FastNet2.Signal("TestSignal")
 ```
 
-## `:Connect` or `:Listen`
+## `:Connect`
 
-Listen an event from the server to receive, `:Connect` and `:Listen` is the same function.
+Listen an event to signal.
 
 ```lua
 (
@@ -28,7 +26,7 @@ Listen an event from the server to receive, `:Connect` and `:Listen` is the same
 )
 ```
 
-Each event only allowed have one callback.
+Each signal event only allowed have one callback.
 
 ```lua
 Remote:Connect(function(...)
@@ -44,7 +42,7 @@ print(Remote.Connected)
 
 ## `:Once`
 
-This function is same as `:Connect` but it disconnect the event once it fired.
+This function is same as `:Connect` but it disconnect the signal once it fired.
 
 ```lua
 (
@@ -84,9 +82,9 @@ Remote:Fire("Hello World!")
 This function have rate limiting to prevent spamming
 :::
 
-## `:Pull`
+## `:Invoke`
 
-Pull is a function that invoke to server.
+Invoke is a function that invoke to server.
 
 ```lua
 (
@@ -100,7 +98,7 @@ local Request = Remote:Pull(2, "Hello World!")
 ```
 
 ::: warning
-This function is yielded, and the minimum for timeout is 2 (seconds)
+This function is yielded, and this function still on beta
 :::
 
 ## `:Wait`

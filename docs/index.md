@@ -12,7 +12,7 @@ hero:
       link: /guide/
     - theme: alt
       text: API Reference
-      link: /api/1.0/server
+      link: /api/1.0/fastnet2
     - theme: alt
       text: View on Github
       link: https://github.com/imezx/FastNet2
