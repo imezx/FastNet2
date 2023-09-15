@@ -3,6 +3,13 @@
 [Refresh]
 - Reupdate existing version
 
+[RC9 - 0.9.3]
+- Using Luau Native Code Generation (--!native) for better optimized performance
+- Changed serialize identifier from hash to string.pack (with lower byte cost)
+- Add Util.Session (Internal function) for serialize function
+- Minor fix .CheckUpdate function
+- Other minor change
+
 [RC9 - 0.9.2]
 - Removed .debug function
 - Minor change to Debug.luau

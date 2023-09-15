@@ -1,7 +1,8 @@
+--!native
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc9 (0.9.2)
+-- version rc9 (0.9.3)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
@@ -10,13 +11,13 @@ FastNet2.version = 0.9
 local IsServer: boolean = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
 
-local Debug = require(script.Debug)
-local Signal = require(script.oneSignal)
-local Util = require(script.Util)
-
 if not script:FindFirstChild("Event") then
 	Instance.new("RemoteEvent", script).Name = "Event"
 end
+
+local Debug = require(script.Debug)
+local Signal = require(script.oneSignal)
+local Util = require(script.Util)
 
 --[[**
 	Custom Signal a alternative of BindableEvent (oneSignal, oneSignal.luau)
@@ -43,19 +44,21 @@ end
 **--]]
 
 function FastNet2.CheckUpdate()
-	Debug.new(IsServer, "[FastNet2]: Unable to check update due ROBLOX Security.", 1)
-	local success: boolean, receive: number = pcall(function()
-		return tonumber(
-			HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
-		) :: number
-	end)
-	if not success then
-		return warn("[FastNet2]: Failed to check update.")
+	Debug.new(IsServer, "[FastNet2]: Unable to check update from client-side due ROBLOX Security.", 1)
+	if IsServer then
+		local success: boolean, receive: number = pcall(function()
+			return tonumber(
+				HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
+			) :: number
+		end)
+		if not success then
+			return warn("[FastNet2]: Failed to check update.")
+		end
+		if receive > FastNet2.version then
+			return warn(string.format("[FastNet2]: new update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
+		end
+		return warn("[FastNet2]: Module is up-to-date.")
 	end
-	if receive > FastNet2.version then
-		return warn(string.format("[FastNet2]: new update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
-	end
-	return warn("[FastNet2]: Module is up-to-date.")
 end
 
 --[[**

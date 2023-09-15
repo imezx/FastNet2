@@ -1,35 +1,45 @@
+--!native
 --!strict
 -- FastNet2 Utilities
-
 local Util = {}
-Util.HashCache = {}
 
 local HttpService = game:GetService("HttpService")
+local RunService = game:GetService("RunService")
+
+local Debug = require(script.Parent:WaitForChild("Debug"))
+
+local Event = script.Parent:WaitForChild("Event")
+
+local SerInt = 0
 
 function Util.CreateUUID(): string
 	return string.gsub(HttpService:GenerateGUID(false), "-", "") :: string
 end
 
--- Optimized Luau Hash with caching
-function Util.hash(data: string | number | boolean): string
-	if typeof(data) == "string" then
-		if not Util.HashCache[data] then
-			local hash: any = 0
-			for i = 1, #data do
-				-- (hash * 32) - hash + string.byte(data, i) for fastest method
-				hash = (hash * 31 + string.byte(data, i)) % 2^32 -- this for better quality of hash
-			end
-			hash = tostring(hash)
-			Util.HashCache[data] = hash -- make it cached the hash
-			return hash
-		end
-		return Util.HashCache[data]
-	elseif typeof(data) == "number" then
-		return tostring(data)
-	elseif typeof(data) == "boolean" then
-		return (data and "\1" or "\0")
-	end
-	return data
+-- Create session semiliar with task.wait function (YIELD)
+function Util.Session(timeout: number): number
+	local thread, n = coroutine.running(), tick()
+	task.delay(math.max(0.25, timeout), function()
+		task.spawn(thread, tick() - n)
+	end)
+	return coroutine.yield()
 end
 
-return Util
+-- Serialize Identifier (Beta) (https://www.lua.org/manual/5.3/manual.html#pdf-string.pack)
+function Util.ser(identifier: string): string
+	Debug.new(typeof(identifier) == "string", "[FastNet2]: Unable to serialize identifier (expected string got "..typeof(identifier)..", will convert to string)", 1)
+	identifier = tostring(identifier)
+	if RunService:IsServer() then
+		if not Event:GetAttribute(identifier) then
+			SerInt += 1
+			Event:SetAttribute(identifier, string.pack("I1", SerInt)) -- I1 -> 255 max, I2 -> ~ 6.5e4 max. (SerInt)
+		end
+	else
+		while not Event:GetAttribute(identifier) do
+			Util.Session(0.5)
+		end
+	end
+	return Event:GetAttribute(identifier)
+end
+
+return table.freeze(Util)

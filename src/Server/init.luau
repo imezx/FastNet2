@@ -1,3 +1,4 @@
+--!native
 -- FastNet2 (Server)
 local Server = {}
 Server.__index = Server
@@ -22,15 +23,15 @@ local Collections = {}
 
 function Server.new(Identifier: string)
 	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string", 0)
-	Debug.new(not Identifiers.find(Util.hash(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
-	Process.reg(Util.hash(Identifier))
-	Collections[Util.hash(Identifier)] = setmetatable({
-		Identifier = Util.hash(Identifier),
+	Debug.new(not Identifiers.find(Util.ser(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
+	Process.reg(Util.ser(Identifier))
+	Collections[Util.ser(Identifier)] = setmetatable({
+		Identifier = Util.ser(Identifier),
 		func = function(...: any): (...any) end,
 		Connected = false,
 		flag = {},
 	}, Server)
-	return Collections[Util.hash(Identifier)]
+	return Collections[Util.ser(Identifier)]
 end
 
 --[[**

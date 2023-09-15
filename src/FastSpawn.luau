@@ -1,4 +1,5 @@
 -- FastSpawn & FreeThreads
+--!native
 --!strict
 
 local Threads = {}

@@ -1,3 +1,4 @@
+--!native
 --!strict
 local ClientProcess = {}
 ClientProcess.processLimit = 500 -- max rate process limit (default: 250)
