@@ -3,6 +3,12 @@
 [Refresh]
 - Reupdate existing version
 
+[RC9 - 0.9.4]
+- Fixed Creating twice "Event" Instance
+- Fixed requestId on Client/Server Pull (function)
+- Add .uniqueNum (function) for requestId (Internal function)
+- Minor performance improvement on :Fire (function) at Client-Side
+
 [RC9 - 0.9.3]
 - Using Luau Native Code Generation (--!native) for better optimized performance
 - Changed serialize identifier from hash to string.pack (with lower byte cost)

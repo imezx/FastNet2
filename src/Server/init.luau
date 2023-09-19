@@ -150,20 +150,18 @@ function Server:Pull(timeout: number, player: Player, ...: any)
 	Debug.new(timeout > 1, "[FastNet2]: expire argument must be minimum 2.", 0)
 	Debug.new(player:IsA("Player"), "[FastNet2]: player argument must be a Player.", 0)
 	Debug.new(#{...} > 0, "[FastNet2]: Unable to invoke without data", 0)
-	local thread, requestId = coroutine.running(), tostring(#self.flag + 1)
+	local thread, requestId = coroutine.running(), string.pack("I5", Util.uniqueNum())
 	local session = task.delay(timeout, function()
 		-- session expire
 		-- removing and clear entire requests point
-		if self.flag[requestId] then
-			table.remove(self.flag, requestId)
-		end
-		if Process.verify(self.Identifier, player, requestId) then
-			table.remove(self.flag, requestId)
+		if Process.verify(self.Identifier, player, requestId) or self.flag[requestId] then
+			self.flag[requestId] = nil
 		end
 		task.spawn(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
 	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
+		self.flag[requestId] = nil
 		task.cancel(session)
 		task.spawn(thread, ...) -- resume thread to finish and return data as successed
 	end

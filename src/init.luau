@@ -2,7 +2,7 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc9 (0.9.3)
+-- version rc9 (0.9.4)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
@@ -11,8 +11,15 @@ FastNet2.version = 0.9
 local IsServer: boolean = game:GetService("RunService"):IsServer()
 local HttpService = game:GetService("HttpService")
 
-if not script:FindFirstChild("Event") then
-	Instance.new("RemoteEvent", script).Name = "Event"
+if IsServer then
+	if not script:FindFirstChild("Event") then
+		Instance.new("RemoteEvent", script).Name = "Event"
+	end
+else
+	if not script:FindFirstChild("Event") then
+		warn("[FastNet2]: Waiting for initialize from server-side.")
+		repeat task.wait() until script:FindFirstChild("Event")
+	end
 end
 
 local Debug = require(script.Debug)
