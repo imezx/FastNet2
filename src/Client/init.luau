@@ -25,14 +25,17 @@ local Collections = {}
 
 function Client.new(Identifier: string)
 	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string", 0)
-	Debug.new(not Identifiers.find(Util.ser(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
-	Process.reg(Util.ser(Identifier))
-	Collections[Util.ser(Identifier)] = setmetatable({
-		Identifier = Util.ser(Identifier),
-		func = function(...: any): (...any) end,
-		Connected = false,
-		flag = {},
-	}, Client)
+	--Debug.new(not Identifiers.find(Util.ser(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
+	if not Identifiers.find(Util.ser(Identifier)) then
+		Process.reg(Util.ser(Identifier))
+		Collections[Util.ser(Identifier)] = setmetatable({
+			Identifier = Util.ser(Identifier),
+			func = function(...: any): (...any) end,
+			Connected = false,
+			flag = {},
+		}, Client)
+	end
+
 	return Collections[Util.ser(Identifier)]
 end
 
@@ -152,11 +155,11 @@ function Client:Pull(timeout: number, ...: any)
 		task.spawn(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
 	end)
 	-- set new flag as checkpoint
-	self.flag[requestId] = function(...)
+	self.flag[requestId] = coroutine.wrap(function(...) --function(...)
 		self.flag[requestId] = nil
 		task.cancel(session)
-		task.spawn(thread, ...) -- resume thread to finish and return data as successed
-	end
+		task.spawn(thread, ...) -- resume thread to finish and return data as successed 
+	end)
 	-- push new request
 	Process.newReq(self.Identifier, requestId, { ... })
 	return coroutine.yield() -- wait for return (yield)
