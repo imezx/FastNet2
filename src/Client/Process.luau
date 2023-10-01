@@ -5,6 +5,7 @@ ClientProcess.processLimit = 500 -- max rate process limit (default: 250)
 ClientProcess.rateLimit = 500 -- max rate limit (default: 150)
 ClientProcess.maxFreeze = 1 -- max duration freezing reaching rate limit (default: 1)
 
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Identifiers = require(script.Parent.Identifier)
 local FastSpawn = require(script.Parent.Parent.FastSpawn)
@@ -19,7 +20,7 @@ function ClientProcess.reg(Identifier: string)
 	if Identifiers.reg(Identifier) then
 		Collections[Identifier] = {
 			OutgoingOrder = 0,
-			_ping = nil,
+			_ping = {},
 			returnRequest = {},
 			re_req_i = 0,
 			requests = {},
@@ -62,10 +63,10 @@ end
 function ClientProcess._ping(Identifier: string): number
 	local thread = coroutine.running()
 	local clock = os.clock()
-	Collections[Identifier]._ping = function(x: number)
+	table.insert(Collections[Identifier]._ping, function(x: number)
 		Collections[Identifier]._ping = nil
 		task.spawn(thread, x - clock)
-	end
+	end)
 	return coroutine.yield()
 end
 
@@ -168,14 +169,16 @@ function ClientProcess.__start()
 				net.returnRequest = {}
 			end
 			-- Ping :Wait()
-			if net._ping then
-				FastSpawn(net._ping, os.clock())
+			if #net._ping > 0 then
+				for _, func in net._ping do
+					FastSpawn(func, os.clock())
+				end
 			end
 		end
 		debug.profileend()
 	end)
-	if not script.Parent.Parent:WaitForChild("Event"):GetAttribute(game:GetService("Players").LocalPlayer.Name) then
-		Event:FireServer("2", game:GetService("Players").LocalPlayer)
+	if Players.LocalPlayer and not script.Parent.Parent:WaitForChild("Event"):GetAttribute(Players.LocalPlayer.Name) then
+		Event:FireServer("2", Players.LocalPlayer.Name)
 	end
 end
 

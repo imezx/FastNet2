@@ -2,7 +2,7 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc9 (0.9.4)
+-- version rc9 (0.9.5)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2

@@ -45,7 +45,6 @@ function Util.ser(identifier: string): string
 		end
 	else
 		while not Event:GetAttribute(identifier) do
-			print("e")
 			Util.Session(0.5)
 		end
 	end

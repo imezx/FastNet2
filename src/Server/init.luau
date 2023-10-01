@@ -9,6 +9,7 @@ local FastSpawn = require(script.Parent.FastSpawn)
 local Debug = require(script.Parent.Debug)
 local Util = require(script.Parent.Util)
 
+local Players = game:GetService("Players")
 local Event = script.Parent:WaitForChild("Event")
 
 local Collections = {}
@@ -23,14 +24,16 @@ local Collections = {}
 
 function Server.new(Identifier: string)
 	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string", 0)
-	Debug.new(not Identifiers.find(Util.ser(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
-	Process.reg(Util.ser(Identifier))
-	Collections[Util.ser(Identifier)] = setmetatable({
-		Identifier = Util.ser(Identifier),
-		func = function(...: any): (...any) end,
-		Connected = false,
-		flag = {},
-	}, Server)
+	if not Identifiers.find(Util.ser(Identifier)) then
+		Process.reg(Util.ser(Identifier))
+		Collections[Util.ser(Identifier)] = setmetatable({
+			_origin = Identifier,
+			Identifier = Util.ser(Identifier),
+			func = function(...: any): (...any) end,
+			Connected = false,
+			flag = {},
+		}, Server)
+	end
 	return Collections[Util.ser(Identifier)]
 end
 
@@ -41,7 +44,7 @@ end
 **--]]
 
 function Server:Connect(callback:  (...any) -> ())
-	Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self.Identifier), 0)
+	Debug.new(not self.Connected, string.format("[FastNet2]: %s already connected", self._origin), 0)
 	self.func = callback
 	Process.reg_pre_f(self.Identifier, callback)
 	self.Connected = true
@@ -208,9 +211,9 @@ Event.OnServerEvent:Connect(function(player: Player, packets: any, secondPackets
 					end
 				end
 				table.clear(secondPackets)
-			elseif packets == "2" then
-				if not Event:GetAttribute(tostring(secondPackets)) then
-					Event:SetAttribute(tostring(secondPackets), true)
+			elseif packets == "2" and typeof(secondPackets) == "string" then
+				if Players:FindFirstChild(secondPackets) and not Event:GetAttribute(secondPackets) then
+					Event:SetAttribute(secondPackets, true)
 				end
 			end
 		end

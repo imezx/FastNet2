@@ -3,6 +3,11 @@
 [Refresh]
 - Reupdate existing version
 
+[RC9 - 0.9.5]
+- Fixed Wait-Event Connected (built-in feature)
+- Support for using multiple :Wait
+- Other minor fix??
+
 [RC9 - 0.9.4]
 - Fixed Creating twice "Event" Instance
 - Fixed requestId on Client/Server Pull (function)

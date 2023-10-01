@@ -14,7 +14,7 @@ function ServerProcess.reg(Identifier: string)
 	if Identifiers.reg(Identifier) then
 		Collections[Identifier] = {
 			Identifier = Identifier,
-			_ping = nil,
+			_ping = {},
 			returnRequest = {},
 			re_req_i = 0,
 			requests = {},
@@ -64,12 +64,11 @@ function ServerProcess.pushback(Identifier: string, player: string, id: number, 
 end
 
 function ServerProcess._ping(Identifier: string): number
-	local thread = coroutine.running()
-	local clock = os.clock()
-	Collections[Identifier]._ping = function(x: number)
+	local thread, clock = coroutine.running(), os.clock()
+	table.insert(Collections[Identifier]._ping, function(x: number)
 		Collections[Identifier]._ping = nil
 		task.spawn(thread, x - clock)
-	end
+	end)
 	return coroutine.yield()
 end
 
@@ -155,19 +154,23 @@ function ServerProcess.__start()
 				net.packets = {}
 			end
 			-- Requests to Queue
-			for player, requests in net.requests do
-				if net.req_i > 0 and player and Players:FindFirstChild(player.Name) and Event:GetAttribute(player.Name) == true then
-					net.req_i -= 1
-					Event:FireClient(player, "0", {[net.Identifier] = requests})
-					table.clear(requests)
+			if net.req_i > 0 then
+				for player, requests in net.requests do
+					if player and Players:FindFirstChild(player.Name) and Event:GetAttribute(player.Name) == true then
+						net.req_i -= 1
+						Event:FireClient(player, "0", {[net.Identifier] = requests})
+						table.clear(requests)
+					end
 				end
 			end
 			-- Return Requests
-			for player, data in net.returnRequest do
-				if net.re_req_i > 0 and Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
-					net.re_req_i -= 1
-					Event:FireClient(Players[player], "1", {[net.Identifier] = data})
-					table.clear(data)
+			if net.re_req_i > 0 then
+				for player, data in net.returnRequest do
+					if Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
+						net.re_req_i -= 1
+						Event:FireClient(Players[player], "1", {[net.Identifier] = data})
+						table.clear(data)
+					end
 				end
 			end
 			-- Single Players to Queue
@@ -185,8 +188,10 @@ function ServerProcess.__start()
 				end
 			end
 			-- Ping :Wait()
-			if net._ping then
-				FastSpawn(net._ping, os.clock())
+			if #net._ping > 0 then
+				for _, func in net._ping do
+					FastSpawn(func, os.clock())
+				end
 			end
 		end
 		debug.profileend()

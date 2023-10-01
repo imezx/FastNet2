@@ -25,14 +25,15 @@ local Collections = {}
 
 function Client.new(Identifier: string)
 	Debug.new(typeof(Identifier) == "string", "[FastNet2]: Identifier must be string", 0)
-	Debug.new(not Identifiers.find(Util.ser(Identifier)), string.format("[FastNet2]: %s already exist", Identifier), 0)
-	Process.reg(Util.ser(Identifier))
-	Collections[Util.ser(Identifier)] = setmetatable({
-		Identifier = Util.ser(Identifier),
-		func = function(...: any): (...any) end,
-		Connected = false,
-		flag = {},
-	}, Client)
+	if not Identifiers.find(Util.ser(Identifier)) then
+		Process.reg(Util.ser(Identifier))
+		Collections[Util.ser(Identifier)] = setmetatable({
+			Identifier = Util.ser(Identifier),
+			func = function(...: any): (...any) end,
+			Connected = false,
+			flag = {},
+		}, Client)
+	end
 	return Collections[Util.ser(Identifier)]
 end
 
