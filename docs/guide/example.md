@@ -61,7 +61,7 @@ task.spawn(function()
 end)
 
 -- Try request a event from server!
-print(Example:Pull("Hello", "this is from > "..Players.LocalPlayer.Name))
+print(Example:Invoke(5, "Hello", "this is from > "..Players.LocalPlayer.Name))
 -- Do a ping & pong to server!
 Ping:Fire(true)
 
