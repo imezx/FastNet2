@@ -93,9 +93,9 @@ Remote:Fire("Hello World!")
 This function have rate limiting to prevent spamming
 :::
 
-## `:Pull`
+## `:Invoke`
 
-Pull is a function that invoke to server.
+Semiliar with :InvokeServer, its for doing Invoke to a Server.
 
 ::: code-group
 ```lua [main]
@@ -106,7 +106,7 @@ Pull is a function that invoke to server.
 ```
 
 ```lua [Example]
-local Request = Remote:Pull(2, "Hello World!")
+local Request = Remote:Invoke(2, "Hello World!")
 ```
 :::
 

@@ -106,9 +106,9 @@ Remote:Fires("Hello World!")
 ```
 :::
 
-## `:Pull`
+## `:Invoke`
 
-Pull is a function that invoke to client.
+Semiliar with `:InvokeClient`, its for doing Invoke to spesific Client.
 
 ::: code-group
 ```lua [main]
@@ -120,7 +120,7 @@ Pull is a function that invoke to client.
 ```
 
 ```lua [Example]
-local Request = Remote:Pull(2, player, "Hello World!")
+local Request = Remote:Invoke(2, player, "Hello World!")
 ```
 :::
 

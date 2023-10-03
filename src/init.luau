@@ -2,7 +2,7 @@
 --!strict
 -- FastNet2
 -- Author: @EternityDev (Eternity_Devs)
--- version rc9 (0.9.5)
+-- version rc9 (0.9.6)
 
 local FastNet2 = {}
 FastNet2.__index = FastNet2
@@ -86,7 +86,7 @@ end
 
 **--]]
 
-function FastNet2.debugLogs()
+function FastNet2.debugLogs(): {any}
 	return Debug.receiveAll()
 end
 

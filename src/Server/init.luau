@@ -10,7 +10,7 @@ local Debug = require(script.Parent.Debug)
 local Util = require(script.Parent.Util)
 
 local Players = game:GetService("Players")
-local Event = script.Parent:WaitForChild("Event")
+local Event:RemoteEvent = script.Parent:WaitForChild("Event")
 
 local Collections = {}
 
@@ -52,6 +52,7 @@ end
 
 --[[**
 	Connect a connection (Luau Parralel)
+	This only works with Actor Instance
 
 	@param callback this must be a function with any arguments
 **--]]
@@ -92,6 +93,7 @@ function Server:Once(callback:  (...any) -> ())
 			self:Disconnect()
 			task.spawn(callback, ...)
 		end
+		Process.reg_pre_f(self.Identifier, callback)
 		self.Connected = true
 	end
 end
@@ -148,24 +150,25 @@ end
 	@params ... any parameters to sent
 **--]]
 
-function Server:Pull(timeout: number, player: Player, ...: any)
+function Server:Invoke(timeout: number, player: Player, ...: any)
 	Debug.new(typeof(timeout) == "number", "[FastNet2]: expire argument must be a number.", 0)
 	Debug.new(timeout > 1, "[FastNet2]: expire argument must be minimum 2.", 0)
 	Debug.new(player:IsA("Player"), "[FastNet2]: player argument must be a Player.", 0)
 	Debug.new(#{...} > 0, "[FastNet2]: Unable to invoke without data", 0)
 	local thread, requestId = coroutine.running(), string.pack("I5", Util.uniqueNum())
-	local session = task.delay(timeout, function()
+	local session = Util.Session(timeout)
+	:After(function(e)
 		-- session expire
 		-- removing and clear entire requests point
 		if Process.verify(self.Identifier, player, requestId) or self.flag[requestId] then
 			self.flag[requestId] = nil
 		end
-		task.spawn(thread, nil) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
-	end)
+		task.spawn(thread, e) -- resume thread to finish and return nil as failed to retreive due over-session (expired)
+	end, nil)
 	-- set new flag as checkpoint
 	self.flag[requestId] = function(...)
 		self.flag[requestId] = nil
-		task.cancel(session)
+		session:Cancel()
 		task.spawn(thread, ...) -- resume thread to finish and return data as successed
 	end
 	-- push new request

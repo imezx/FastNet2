@@ -16,13 +16,23 @@ function Util.CreateUUID(): string
 	return string.gsub(HttpService:GenerateGUID(false), "-", "") :: string
 end
 
--- Create session semiliar with task.wait function (YIELD) (Internal Function)
-function Util.Session(timeout: number): number
-	local thread, n = coroutine.running(), tick()
-	task.delay(math.max(0.25, timeout), function()
-		task.spawn(thread, tick() - n)
+-- Create session semiliar with task.wait function (Internal Function)
+function Util.Session(timeout: number)
+	local afterSession, arguments, private = nil, {}, {}
+	local session = task.delay(math.max(0.5, timeout), function()
+		if afterSession and typeof(afterSession) == "function" then
+			task.spawn(afterSession, table.unpack(arguments))
+		end
 	end)
-	return coroutine.yield()
+	function private:After(func: (...any) -> (), ...: any)
+		afterSession = func
+		arguments = { ... }
+		return private
+	end
+	function private:Cancel()
+		task.cancel(session)
+	end
+	return private
 end
 
 -- Generate a randomized unique number with 8 length num (Internal Function)
@@ -45,7 +55,7 @@ function Util.ser(identifier: string): string
 		end
 	else
 		while not Event:GetAttribute(identifier) do
-			Util.Session(0.5)
+			task.wait(0.5)
 		end
 	end
 	return Event:GetAttribute(identifier)

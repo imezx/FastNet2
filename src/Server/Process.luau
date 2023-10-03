@@ -16,7 +16,7 @@ function ServerProcess.reg(Identifier: string)
 			Identifier = Identifier,
 			_ping = {},
 			returnRequest = {},
-			re_req_i = 0,
+			re_req_i = {},
 			requests = {},
 			req_i = 0,
 			packets = {},
@@ -60,7 +60,7 @@ function ServerProcess.pushback(Identifier: string, player: string, id: number, 
 		Collections[Identifier].returnRequest[player] = {}
 	end
 	Collections[Identifier].returnRequest[player][id] = obj
-	Collections[Identifier].re_req_i += 1
+	Collections[Identifier].re_req_i[player] = true
 end
 
 function ServerProcess._ping(Identifier: string): number
@@ -100,6 +100,7 @@ end
 function ServerProcess.__start()
 	local outQueue: { [string]: {any} }, outIndex: number = {}, 0
 	local outSQueue: { [string]: {any} }, outSIndex: number = {}, 0
+	local outReq: { [string]: {any} }, outRIndex: { [string]: boolean } = {}, {}
 	RunService.PostSimulation:Connect(function()
 		-- Sent all data to client (Multiple Players)
 		if outIndex > 0 then
@@ -114,6 +115,13 @@ function ServerProcess.__start()
 					Event:FireClient(Players[player], packet)
 					table.clear(packet)
 				end
+			end
+		end
+		for i, player: Player in Players:GetPlayers() do
+			if outReq[player.Name] and outRIndex[player.Name] == true then
+				outRIndex[player.Name] = false
+				Event:FireClient(player, "1", outReq[player.Name])
+				table.clear(outReq[player.Name])
 			end
 		end
 		debug.profilebegin("FastNet2.process")
@@ -164,13 +172,19 @@ function ServerProcess.__start()
 				end
 			end
 			-- Return Requests
-			if net.re_req_i > 0 then
-				for player, data in net.returnRequest do
-					if Players:FindFirstChild(player) and Event:GetAttribute(player) == true then
-						net.re_req_i -= 1
-						Event:FireClient(Players[player], "1", {[net.Identifier] = data})
-						table.clear(data)
+			for player, data in net.returnRequest do
+				if player and Players:FindFirstChild(player) and net.re_req_i[player] == true and Event:GetAttribute(player) == true then
+					net.re_req_i[player] = false
+					if not outReq[player] then
+						outReq[player] = {}
 					end
+					if not outReq[player][net.Identifier] then
+						outReq[player][net.Identifier] = {}
+					end
+					outReq[player][net.Identifier] = table.clone(data)
+					outRIndex[player] = true
+					--Event:FireClient(Players[player], "1", {[net.Identifier] = data})
+					table.clear(data)
 				end
 			end
 			-- Single Players to Queue

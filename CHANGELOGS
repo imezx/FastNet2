@@ -3,6 +3,13 @@
 [Refresh]
 - Reupdate existing version
 
+[RC9 - 0.9.6]
+- Changed :Pull to :Invoke
+- Improved Invoking on bandwidth saving (only affect to multiple-events)
+- Fix :Once
+- Changed entire :Session works
+- :Invoke now use :Session for it internal system
+
 [RC9 - 0.9.5]
 - Fixed Wait-Event Connected (built-in feature)
 - Support for using multiple :Wait
