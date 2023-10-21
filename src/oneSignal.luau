@@ -4,12 +4,12 @@
 -- (https://github.com/imezx/oneSignal/blob/main/oneSignal.luau)
 
 local oneSignal = {}
-oneSignal.ClassName = "oneSignal"
+oneSignal.ClassName = "Signal"
 oneSignal.__index = oneSignal
 
-local HttpService = game:GetService("HttpService")
 local Collections = {}
 
+local FastSpawn = require(script.Parent.FastSpawn)
 local Debug = require(script.Parent.Debug)
 
 function oneSignal.new(identifier: string)
@@ -46,18 +46,16 @@ function oneSignal:Invoke(timeout: number, ...: any): any
 		task.spawn(thread, nil)
 		packed = nil
 	end)
-	retrive = task.spawn(function()
-		task.wait(1/60)
-		task.cancel(session)
+	retrive = task.defer(function()
 		task.spawn(thread, self.cb(table.unpack(packed)))
+		task.cancel(session)
 		packed = nil
 	end)
 	return coroutine.yield()
 end
 
 function oneSignal:Wait(): number
-	local thread = coroutine.running()
-	local clock = os.clock()
+	local thread, clock = coroutine.running(), os.clock()
 	self._ping = function(x)
 		self._ping = nil
 		task.spawn(thread, (x - clock))
@@ -67,10 +65,9 @@ end
 
 function oneSignal:Once(callback: (...any) -> ())
 	if not self.Connected then
-		self.cb = function(...)
+		self:Connect(function()
 			self:Disconnect()
-			task.spawn(callback, ...)
-		end
+		end)
 		self.Connected = true
 	end
 end
@@ -85,15 +82,15 @@ end
 function oneSignal:Destroy()
 	self:Disconnect()
 	Collections[self.Identifier] = nil
-	self = nil
+	setmetatable(self, nil)
 end
 
 function oneSignal:Fire(...: any)
 	if self.Connected then
-		task.spawn(self.cb, ...)
+		FastSpawn(self.cb, ...)
 	end
 	if self._ping then
-		task.spawn(self._ping, os.clock())
+		FastSpawn(self._ping, os.clock())
 	end
 end
 
