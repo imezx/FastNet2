@@ -88,12 +88,10 @@ end
 
 function Client:Once(callback:  (...any) -> ())
 	if not self.Connected then
-		self.func = function(...)
+		self:Connect(function(...)
 			self:Disconnect()
 			task.spawn(callback, ...)
-		end
-		Process.reg_pre_f(self.Identifier, callback)
-		self.Connected = true
+		end)
 	end
 end
 

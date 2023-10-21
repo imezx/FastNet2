@@ -65,10 +65,10 @@ end
 
 function oneSignal:Once(callback: (...any) -> ())
 	if not self.Connected then
-		self:Connect(function()
+		self:Connect(function(...)
 			self:Disconnect()
+			task.spawn(callback, ...)
 		end)
-		self.Connected = true
 	end
 end
 
