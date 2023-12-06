@@ -1,0 +1,152 @@
+[CHANGELOGS - FASTNET2]
+
+[Refresh]
+- Reupdate existing version
+
+[RC9 - 0.9.7]
+- Add Unreliable Events support
+
+[RC9 - 0.9.6]
+- Changed :Pull to :Invoke
+- Improved Invoking on bandwidth saving (only affect to multiple-events)
+- Fix :Once
+- Changed entire :Session works
+- :Invoke now use :Session for it internal system
+
+[RC9 - 0.9.5]
+- Fixed Wait-Event Connected (built-in feature)
+- Support for using multiple :Wait
+- Other minor fix??
+
+[RC9 - 0.9.4]
+- Fixed Creating twice "Event" Instance
+- Fixed requestId on Client/Server Pull (function)
+- Add .uniqueNum (function) for requestId (Internal function)
+- Minor performance improvement on :Fire (function) at Client-Side
+
+[RC9 - 0.9.3]
+- Using Luau Native Code Generation (--!native) for better optimized performance
+- Changed serialize identifier from hash to string.pack (with lower byte cost)
+- Add Util.Session (Internal function) for serialize function
+- Minor fix .CheckUpdate function
+- Other minor change
+
+[RC9 - 0.9.2]
+- Removed .debug function
+- Minor change to Debug.luau
+- Minor change on Process.luau (Scheduler Priority)
+- Documentation page update
+
+[RC9 - 0.9.1]
+- Add Documentation comments
+- Add Util.luau
+- Add Hash function to Util.luau
+- Moved .CreateUUID function to Util.luau
+- Connection Identifier is now converted to hash using Hash function from Util.luau
+- Other minor changes
+
+[RC9 - 0.9.0]
+- Improved Invoke/Pull System on SERVER & CLIENT (upto 5x faster)
+- Added :Invoke (function) for Signal (oneSignal)
+- Improved FastSpawn type
+- Migrated coroutine.resume to task.spawn on oneSignal
+- Fixed FastNet2Module.Signal (function) type
+
+[PATCH - 0.8.2]
+- Fixed Request/Pull over-send (SERVER)
+- Fixed Request/Pull return/response data being tabled (SERVER)
+- Fixed Built-In wait player feature
+- Minor Improvement (SERVER & CLIENT)
+
+[RC8 - 0.8.0]
+- Add Debugging
+- moved assert to Debug
+- Add RateLimit on :Fire (CLIENT)
+
+[RC7 - 0.7.0]
+- Fixed & Improved Built-in player connections pre-process wait issue from rc5 0.5.0
+- Fixed Server & Client MULTIPLE Pull/Invoke
+- Fixed Server & Client Identifier Registration
+- Fixed Server & Client returning Multiple Requests (Invoke/Pull)
+- Fully fixed 0.6.1 doesnt have full rc5
+- Changed Pull/Invoke requestId to string from number
+
+[PATCH - 0.6.1]
+- Patch 0.6.0 doesnt have rc5 updates
+
+[RC6 - 0.6.0]
+- Client & Server Identifiers are now cached/stored
+- Minor improvements on types
+- Add .CreateUUID function
+
+[RC5 - 0.5.0]
+- Built-in Pre-process (wait till connection target-point being connected)
+
+[RC4 - 0.4.0]
+- Few Rewrites (Client & Server)
+- Fixed Server Pull/Invoking
+- Client RateLimit
+
+[RC3 - 0.3.1]
+- Fix Critical server (firing player / single player target)
+- Minor Improvements
+
+[RC3]
+- [NEW] CheckUpdate (no package update)
+- [FIX] FastSpawn & MultiThread
+- [PRE] RateLimiting
+
+[RC2]
+- RemoteFunction / Pull implementation
+- Fixes
+
+[RC1]
+- Rewrite
+
+[0.0.8]
+- Hold Connection (Experimental)
+
+[0.0.8e - PRE_BUILT]
+- Added Encoding & Decoding 1.0 Feature (default off)
+
+[0.0.7 - PATCH 1/REPLACE]
+- Removed .__init (now you dont required to init first to use the module)
+- added ._setdebug for set debug option
+- debug automaticly off on client
+- removed a print
+- minor fix
+
+[0.0.7]
+- Improved system
+- Fixed bug
+
+[0.0.6]
+- RemoteFunction now supported (Beta)
+- minor improvements
+
+[0.0.5]
+- now fastnet2 requires to call .init(...) first
+- added thread-mode level option
+- added debug option
+- added new function
+- minor improvements & fix
+
+[0.0.4]
+- Added :Wait, :Once, & some other functions
+- Support lowercased name function
+- Minor Server side improvement
+- Patch critical on 0.0.3
+
+[0.0.3]
+- Improved Thread.luau
+- Increase threadsIndex
+- Added :Wait & .getProvider
+- Minor improvements
+
+[0.0.2]
+- Added Server Support (Beta)
+- Minor improvements
+- improved Debug.luau
+
+[0.0.1]
+- initial release pre-alpha version
