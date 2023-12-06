@@ -4,7 +4,7 @@
 - Reupdate existing version
 
 [RC9 - 0.9.7]
-- Add Unreliable Events support
+- Add Unreliable Events support (beta)
 
 [RC9 - 0.9.6]
 - Changed :Pull to :Invoke

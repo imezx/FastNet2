@@ -5,4 +5,3 @@ registry = "test"
 [[package]]
 name = "imezx/fastnet2"
 version = "0.9.7"
-dependencies = []
