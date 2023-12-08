@@ -22,7 +22,7 @@ FastNet2 have built-in feature where it securing their data network to make expl
 
 ---
 
-## [Get Started](https://imezx.github.io/FastNet2/docs)
+## [Document](https://imezx.github.io/FastNet2/docs)
 
 ---
 
