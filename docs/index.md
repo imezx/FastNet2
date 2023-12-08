@@ -1,20 +1,20 @@
-layout: home
+<div align="center">
+	<img src="public/header.png" alt="FastNet2 icon" />
+    <h1><span style="color:blue;">FastNet2</span></h1>
+    <p><h1>A incredible and power networking module for roblox games.</h1></p>
+</div>
 
-hero:
-  image:
-    src: "/icon.ico"
-  name: "FastNet2"
-  text: "A incredible and power networking module for roblox games."
-  actions:
-    - theme: brand
-      text: Get Started
-      link: /guide/
-    - theme: alt
-      text: API Reference
-      link: /api/1.0/fastnet2
-    - theme: alt
-      text: View on Github
-      link: https://github.com/imezx/FastNet2
+---
+
+## Actions
+  ### Get Started
+  https://imezx.github.io/FastNet2/docs/guide/
+  
+  ### API Reference
+  https://imezx.github.io/FastNet2/docs/api/1.0/fastnet2
+  
+  ### View on Github
+  https://github.com/imezx/FastNet2
 
 features:
   - icon: ⚡
@@ -30,4 +30,4 @@ features:
     title: Secure
     details: FastNet2 have built-in feature where it securing their data network to make exploiters harder to exploit it
 
-
+---
