@@ -30,4 +30,4 @@ features:
     title: Secure
     details: FastNet2 have built-in feature where it securing their data network to make exploiters harder to exploit it
 
----
+
