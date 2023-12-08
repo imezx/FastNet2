@@ -1,4 +1,4 @@
-# Overview
+# FastNet2
 
 FastNet2 is a networking library for Roblox, where its very-fast performance and lightweight.
 
