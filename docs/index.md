@@ -11,7 +11,7 @@
   https://imezx.github.io/FastNet2/docs/guide/
   
   ### API Reference
-  https://imezx.github.io/FastNet2/docs/api/1.0/fastnet2
+  https://imezx.github.io/FastNet2/docs/api/1.0/index
   
   ### View on Github
   https://github.com/imezx/FastNet2
