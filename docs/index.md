@@ -5,7 +5,7 @@ hero:
   image:
     src: "/icon.ico"
   name: "FastNet2"
-  text: "A incredible and power networking module for roblox games."
+  text: "A incredible and powerful networking library for roblox games."
   actions:
     - theme: brand
       text: Get Started
@@ -23,7 +23,7 @@ features:
     details: FastNet2 is very-fast with high performance networking, only use a single remote event to reduce bandwidth usage and increase performance gain.
   - icon: 🍃
     title: Lightweight
-    details: FastNet2 is a lightweight module for roblox games
+    details: FastNet2 is a lightweight library for roblox games
   - icon: 📊
     title: Task
     details: FastNet2 been optimized for a game that have heavy usage and require optimizations

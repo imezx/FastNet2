@@ -9,12 +9,15 @@ Create new FastNet2 event
 ::: code-group
 ```lua [main]
 (
-	Identifier: string
+	Identifier: string,
+	reliable: boolean
 )
 ```
 
 ```lua [Example]
-local Remote = FastNet2.new("Remote")
+local Remote = FastNet2.new("Remote", false) -- is unreliable event
+local Remote2 = FastNet2.new("Remote", true) -- is reliable event
+local Remote3 = FastNet2.new("Remote") -- is also reliable event
 ```
 :::
 
