@@ -55,20 +55,22 @@ end
 
 function FastNet2.CheckUpdate()
 	Debug.new(IsServer, "[FastNet2]: Unable to check update from client-side due ROBLOX Security.", 1)
-	if IsServer then
-		local success: boolean, receive: number = pcall(function()
-			return tonumber(
-				HttpService:GetAsync("https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true)
-			) :: number
-		end)
-		if not success then
-			return warn("[FastNet2]: Failed to check update.")
-		end
-		if receive > FastNet2.version then
-			return warn(string.format("[FastNet2]: new update available with version: %s current: %s", tostring(receive), tostring(FastNet2.version)))
-		end
-		return warn("[FastNet2]: Module is up-to-date.")
+
+	if not IsServer then return warn("[FastNet2] Only server can check the version!") end
+	-- Funny way of doing it
+	local success: boolean,recieve: string = pcall(
+		HttpService.GetAsync,HttpService,"https://raw.githubusercontent.com/imezx/FastNet2/master/VERSION", true
+	)
+
+	if not success then
+		return warn("[FastNet2]: Failed to check update.")
 	end
+
+	if tonumber(receive) > FastNet2.version then
+		return warn(string.format("[FastNet2]: new update available with version: %s current: %s", receive, tostring(FastNet2.version)))
+	end
+
+	return warn("[FastNet2]: Module is up-to-date.")
 end
 
 --[[**
